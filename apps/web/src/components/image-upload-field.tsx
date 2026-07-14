@@ -58,13 +58,13 @@ export function ImageUploadField({
   return (
     <div className={cn('space-y-1.5', className)}>
       <div className="flex items-center justify-between gap-2">
-        <label className="text-xs font-semibold text-steel-600">
+        <label className="text-xs font-semibold text-muted-foreground">
           {label}
           {required ? ' *' : ''}
         </label>
         <button
           type="button"
-          className="text-[11px] font-semibold text-bolt-700 cursor-pointer"
+          className="text-[11px] font-semibold text-bolt-700 dark:text-bolt-300 cursor-pointer"
           onClick={() => setShowUrl((s) => !s)}
         >
           {showUrl ? 'Hide URL' : 'Paste URL'}
@@ -77,8 +77,8 @@ export function ImageUploadField({
           disabled={uploading}
           onClick={() => inputRef.current?.click()}
           className={cn(
-            'flex min-h-[88px] min-w-[88px] flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-steel-200 bg-steel-50 px-2 text-steel-500 transition hover:border-bolt-400 hover:bg-bolt-50 cursor-pointer',
-            value && 'border-solid border-steel-200 p-0 overflow-hidden',
+            'flex min-h-[88px] min-w-[88px] flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-border bg-muted px-2 text-muted-foreground transition hover:border-bolt-400 hover:bg-bolt-50 dark:hover:bg-bolt-950/50 cursor-pointer',
+            value && 'border-solid border-border p-0 overflow-hidden',
             uploading && 'opacity-70 pointer-events-none',
           )}
         >
@@ -92,12 +92,12 @@ export function ImageUploadField({
             </div>
           ) : uploading ? (
             <>
-              <Loader2 className="h-6 w-6 animate-spin text-bolt-700" />
+              <Loader2 className="h-6 w-6 animate-spin text-bolt-700 dark:text-bolt-300" />
               <span className="text-[10px] font-semibold">Uploading…</span>
             </>
           ) : (
             <>
-              <ImagePlus className="h-6 w-6 text-bolt-700" />
+              <ImagePlus className="h-6 w-6 text-bolt-700 dark:text-bolt-300" />
               <span className="text-[10px] font-semibold text-center">
                 Tap to upload
               </span>
@@ -108,12 +108,12 @@ export function ImageUploadField({
         <div className="flex min-w-0 flex-1 flex-col justify-center gap-1">
           {value ? (
             <div className="flex items-start gap-1">
-              <p className="min-w-0 flex-1 break-all text-[11px] text-steel-500">
+              <p className="min-w-0 flex-1 break-all text-[11px] text-muted-foreground">
                 {value}
               </p>
               <button
                 type="button"
-                className="shrink-0 rounded-lg p-1.5 text-steel-400 hover:bg-steel-100 hover:text-danger cursor-pointer"
+                className="shrink-0 rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-danger cursor-pointer"
                 onClick={() => onChange('')}
                 aria-label="Remove photo"
               >
@@ -121,11 +121,11 @@ export function ImageUploadField({
               </button>
             </div>
           ) : (
-            <p className="text-xs text-steel-500">
+            <p className="text-xs text-muted-foreground">
               Camera or gallery · max 8MB · JPEG/PNG/WebP
             </p>
           )}
-          {hint && <p className="text-[11px] text-steel-400">{hint}</p>}
+          {hint && <p className="text-[11px] text-muted-foreground">{hint}</p>}
         </div>
       </div>
 

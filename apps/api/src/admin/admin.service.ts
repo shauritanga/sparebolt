@@ -11,6 +11,8 @@ export class AdminService {
       users,
       sellers,
       drivers,
+      pendingSellers,
+      pendingDrivers,
       listings,
       orders,
       heldEscrow,
@@ -19,6 +21,8 @@ export class AdminService {
       this.prisma.user.count(),
       this.prisma.sellerProfile.count({ where: { status: 'APPROVED' } }),
       this.prisma.driverProfile.count({ where: { status: 'APPROVED' } }),
+      this.prisma.sellerProfile.count({ where: { status: 'PENDING' } }),
+      this.prisma.driverProfile.count({ where: { status: 'PENDING' } }),
       this.prisma.listing.count({ where: { isActive: true } }),
       this.prisma.order.count(),
       this.prisma.escrow.aggregate({
@@ -43,11 +47,14 @@ export class AdminService {
         users,
         sellers,
         drivers,
+        pendingSellers,
+        pendingDrivers,
         listings,
         orders,
         escrowHeld: Number(heldEscrow._sum.amount ?? 0),
         escrowCount: heldEscrow._count,
         openDisputes,
+        needsAttention: pendingSellers + pendingDrivers + openDisputes,
       },
       recentOrders,
     };
@@ -283,13 +290,33 @@ export class AdminService {
           select: {
             orderNumber: true,
             status: true,
-            customerId: true,
             total: true,
+            createdAt: true,
+            customer: {
+              select: {
+                firstName: true,
+                lastName: true,
+                phone: true,
+                email: true,
+              },
+            },
+            items: {
+              select: {
+                title: true,
+                quantity: true,
+                lineTotal: true,
+                sellerId: true,
+              },
+              take: 8,
+            },
+            dispute: {
+              select: { id: true, status: true, reason: true },
+            },
           },
         },
       },
       orderBy: { heldAt: 'desc' },
-      take: 100,
+      take: 200,
     });
   }
 }

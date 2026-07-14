@@ -337,6 +337,40 @@ model Address {
   @@map("addresses")
 }
 
+// ─── Locations (Tanzania Census 2022) ────────────────────────────────────────
+
+model Region {
+  id        String     @id @default(cuid())
+  name      String     @unique
+  sortOrder Int        @default(0)
+  districts District[]
+
+  @@map("regions")
+}
+
+model District {
+  id       String @id @default(cuid())
+  name     String // display name (disambiguated if needed)
+  regionId String
+  region   Region @relation(fields: [regionId], references: [id], onDelete: Cascade)
+  wards    Ward[]
+
+  @@unique([regionId, name])
+  @@index([name])
+  @@map("districts")
+}
+
+model Ward {
+  id         String   @id @default(cuid())
+  name       String
+  districtId String
+  district   District @relation(fields: [districtId], references: [id], onDelete: Cascade)
+
+  @@unique([districtId, name])
+  @@index([name])
+  @@map("wards")
+}
+
 // ─── Catalog ─────────────────────────────────────────────────────────────────
 
 model Category {

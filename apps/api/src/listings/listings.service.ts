@@ -28,24 +28,50 @@ export class ListingsService {
     };
 
     if (query.q) {
+      const term = query.q.trim();
       where.OR = [
-        { title: { contains: query.q, mode: 'insensitive' } },
-        { description: { contains: query.q, mode: 'insensitive' } },
-        { partNumber: { contains: query.q, mode: 'insensitive' } },
+        { title: { contains: term, mode: 'insensitive' } },
+        { description: { contains: term, mode: 'insensitive' } },
+        { partNumber: { contains: term, mode: 'insensitive' } },
+        { make: { contains: term, mode: 'insensitive' } },
+        { model: { contains: term, mode: 'insensitive' } },
+        { brand: { contains: term, mode: 'insensitive' } },
+        { manufacturer: { contains: term, mode: 'insensitive' } },
+        { engine: { contains: term, mode: 'insensitive' } },
       ];
     }
     if (query.categoryId) where.categoryId = query.categoryId;
-    if (query.make) where.make = { equals: query.make, mode: 'insensitive' };
-    if (query.model) where.model = { equals: query.model, mode: 'insensitive' };
-    if (query.city) where.city = { equals: query.city, mode: 'insensitive' };
+    // Partial match so "Toyo" still finds Toyota
+    if (query.make) {
+      where.make = { contains: query.make.trim(), mode: 'insensitive' };
+    }
+    if (query.model) {
+      where.model = { contains: query.model.trim(), mode: 'insensitive' };
+    }
+    if (query.city) {
+      where.city = { contains: query.city.trim(), mode: 'insensitive' };
+    }
     if (query.condition) where.condition = query.condition;
+    if (query.partType) {
+      where.partType = { contains: query.partType.trim(), mode: 'insensitive' };
+    }
+    if (query.brand) {
+      where.brand = { contains: query.brand.trim(), mode: 'insensitive' };
+    }
+    if (query.partNumber) {
+      where.partNumber = {
+        contains: query.partNumber.trim(),
+        mode: 'insensitive',
+      };
+    }
     if (query.minPrice || query.maxPrice) {
       where.price = {};
       if (query.minPrice) where.price.gte = query.minPrice;
       if (query.maxPrice) where.price.lte = query.maxPrice;
     }
+    // Year fits vehicle compatibility range on the listing
     if (query.year) {
-      where.AND = [
+      const yearFilters: Prisma.ListingWhereInput[] = [
         {
           OR: [{ yearFrom: null }, { yearFrom: { lte: query.year } }],
         },
@@ -53,6 +79,7 @@ export class ListingsService {
           OR: [{ yearTo: null }, { yearTo: { gte: query.year } }],
         },
       ];
+      where.AND = [...(Array.isArray(where.AND) ? where.AND : []), ...yearFilters];
     }
 
     const [items, total] = await Promise.all([

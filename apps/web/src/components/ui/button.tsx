@@ -4,17 +4,18 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-semibold transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bolt-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98]',
+  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-semibold transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98]',
   {
     variants: {
       variant: {
         default:
           'bg-bolt-700 text-white shadow-sm hover:bg-bolt-800 hover:shadow-md',
         secondary:
-          'bg-steel-100 text-steel-900 hover:bg-steel-200 border border-steel-200',
+          'bg-muted text-foreground hover:bg-border/60 border border-border',
         outline:
-          'border-2 border-bolt-700 text-bolt-800 bg-transparent hover:bg-bolt-50',
-        ghost: 'hover:bg-steel-100 text-steel-700',
+          'border-2 border-bolt-600 text-bolt-700 dark:text-bolt-300 bg-transparent hover:bg-bolt-50 dark:hover:bg-bolt-950',
+        ghost:
+          'hover:bg-muted text-muted-foreground hover:text-foreground',
         danger: 'bg-danger text-white hover:bg-red-700',
         amber:
           'bg-amber-signal text-steel-950 hover:bg-amber-500 shadow-sm',

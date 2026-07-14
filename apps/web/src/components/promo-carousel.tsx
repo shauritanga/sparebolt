@@ -121,7 +121,7 @@ export function PromoCarousel() {
 
   if (!loaded) {
     return (
-      <div className="aspect-[16/10] w-full animate-pulse rounded-3xl bg-steel-200/70 sm:aspect-[21/9]" />
+      <div className="aspect-[16/10] w-full animate-pulse rounded-3xl bg-muted/70 sm:aspect-[21/9]" />
     );
   }
 
@@ -188,7 +188,7 @@ export function PromoCarousel() {
             <Button
               asChild
               size="lg"
-              className="bg-white text-steel-950 hover:bg-steel-100 font-bold shadow-md"
+              className="bg-card text-foreground hover:bg-muted font-bold shadow-md"
               onClick={onCta}
             >
               <Link to={href}>{current.ctaLabel || 'Shop now'}</Link>
@@ -230,8 +230,8 @@ export function PromoCarousel() {
               className={cn(
                 'h-1.5 rounded-full transition-all cursor-pointer',
                 i === index % count
-                  ? 'w-6 bg-white'
-                  : 'w-1.5 bg-white/50 hover:bg-white/80',
+                  ? 'w-6 bg-card'
+                  : 'w-1.5 bg-card/50 hover:bg-card/80',
               )}
               aria-label={`Go to ad ${i + 1}`}
               aria-current={i === index % count}

@@ -8,6 +8,12 @@ import { useCartStore } from '@/stores/cart-store';
 import { formatTZS } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  emptyLocation,
+  LocationPicker,
+  locationToApiFields,
+  type LocationValue,
+} from '@/components/location-picker';
 
 export function CheckoutPage() {
   const { t } = useTranslation();
@@ -18,12 +24,8 @@ export function CheckoutPage() {
   const [phone, setPhone] = useState('');
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
-  const [newAddr, setNewAddr] = useState({
-    label: 'Home',
-    street: '',
-    area: '',
-    city: 'Dar es Salaam',
-  });
+  const [label, setLabel] = useState('Home');
+  const [location, setLocation] = useState<LocationValue>(emptyLocation());
 
   useEffect(() => {
     if (!items.length) {
@@ -41,16 +43,26 @@ export function CheckoutPage() {
   const total = subtotal() + deliveryFee;
 
   const saveAddress = async () => {
-    if (!newAddr.street || !newAddr.city) {
-      toast.error('Street and city required');
+    if (!location.regionId || !location.districtId || !location.wardId) {
+      toast.error('Select region, district, and ward');
       return;
     }
+    if (!location.street.trim()) {
+      toast.error('Street address is required');
+      return;
+    }
+    const fields = locationToApiFields(location);
     const { data } = await api.post('/addresses', {
-      ...newAddr,
+      label: label || 'Home',
+      street: fields.street,
+      area: fields.area,
+      city: fields.city,
+      region: fields.region,
       isDefault: !addresses.length,
     });
     setAddresses((a) => [...a, data]);
     setAddressId(data.id);
+    setLocation(emptyLocation());
     toast.success('Address saved');
   };
 
@@ -89,15 +101,15 @@ export function CheckoutPage() {
     <div className="mx-auto max-w-lg space-y-5">
       <h1 className="font-display text-2xl font-extrabold">{t('checkout')}</h1>
 
-      <section className="space-y-3 rounded-2xl border border-steel-200 bg-white p-4">
+      <section className="space-y-3 rounded-2xl border border-border bg-card p-4">
         <h2 className="font-display font-bold">Delivery address</h2>
         {addresses.map((a) => (
           <label
             key={a.id}
             className={`flex cursor-pointer gap-3 rounded-xl border p-3 ${
               addressId === a.id
-                ? 'border-bolt-600 bg-bolt-50'
-                : 'border-steel-200'
+                ? 'border-bolt-600 bg-bolt-50 dark:bg-bolt-950/50'
+                : 'border-border'
             }`}
           >
             <input
@@ -109,48 +121,33 @@ export function CheckoutPage() {
             />
             <div>
               <p className="font-semibold">{a.label}</p>
-              <p className="text-sm text-steel-600">
+              <p className="text-sm text-muted-foreground">
                 {a.street}
-                {a.area ? `, ${a.area}` : ''} — {a.city}
+                {a.area ? `, ${a.area}` : ''}
+                {a.city ? ` — ${a.city}` : ''}
+                {a.region ? `, ${a.region}` : ''}
               </p>
             </div>
           </label>
         ))}
 
-        <div className="space-y-2 border-t border-steel-100 pt-3">
-          <p className="text-xs font-semibold uppercase text-steel-400">
+        <div className="space-y-3 border-t border-border pt-3">
+          <p className="text-xs font-semibold uppercase text-muted-foreground">
             Add new address
           </p>
           <Input
-            placeholder="Street / landmark"
-            value={newAddr.street}
-            onChange={(e) =>
-              setNewAddr((s) => ({ ...s, street: e.target.value }))
-            }
+            placeholder="Label (Home, Work…)"
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
           />
-          <div className="grid grid-cols-2 gap-2">
-            <Input
-              placeholder="Area"
-              value={newAddr.area}
-              onChange={(e) =>
-                setNewAddr((s) => ({ ...s, area: e.target.value }))
-              }
-            />
-            <Input
-              placeholder="City"
-              value={newAddr.city}
-              onChange={(e) =>
-                setNewAddr((s) => ({ ...s, city: e.target.value }))
-              }
-            />
-          </div>
+          <LocationPicker value={location} onChange={setLocation} />
           <Button variant="secondary" onClick={() => void saveAddress()}>
             Save address
           </Button>
         </div>
       </section>
 
-      <section className="space-y-3 rounded-2xl border border-steel-200 bg-white p-4">
+      <section className="space-y-3 rounded-2xl border border-border bg-card p-4">
         <h2 className="font-display font-bold">Mobile money (ClickPesa)</h2>
         <Input
           type="tel"
@@ -165,12 +162,12 @@ export function CheckoutPage() {
         />
       </section>
 
-      <div className="flex items-start gap-2 rounded-2xl bg-bolt-50 p-4 text-sm text-bolt-900">
+      <div className="flex items-start gap-2 rounded-2xl bg-bolt-50 dark:bg-bolt-950/50 p-4 text-sm text-bolt-900 dark:text-bolt-100">
         <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0" />
         <p>{t('escrowNote')}</p>
       </div>
 
-      <div className="rounded-2xl border border-steel-200 bg-white p-4 text-sm">
+      <div className="rounded-2xl border border-border bg-card p-4 text-sm">
         <div className="flex justify-between">
           <span>{t('subtotal')}</span>
           <span className="font-semibold">{formatTZS(subtotal())}</span>
@@ -181,7 +178,7 @@ export function CheckoutPage() {
         </div>
         <div className="mt-2 flex justify-between border-t pt-2 font-display text-lg font-bold">
           <span>{t('total')}</span>
-          <span className="text-bolt-800">{formatTZS(total)}</span>
+          <span className="text-bolt-800 dark:text-bolt-200">{formatTZS(total)}</span>
         </div>
       </div>
 

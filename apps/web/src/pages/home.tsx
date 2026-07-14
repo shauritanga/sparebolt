@@ -74,14 +74,14 @@ export function HomePage() {
       >
         <div className="relative flex-1">
           <Search
-            className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-steel-500"
+            className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground"
             aria-hidden
           />
           <Input
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder={t('searchPlaceholder')}
-            className="border-steel-300 bg-white pl-11 text-steel-900 placeholder:text-steel-500"
+            className="border-border bg-card pl-11 text-foreground placeholder:text-muted-foreground"
             aria-label={t('searchPlaceholder')}
           />
         </div>
@@ -93,12 +93,12 @@ export function HomePage() {
       {/* Categories */}
       <section>
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="font-display text-lg font-bold text-steel-900">
+          <h2 className="font-display text-lg font-bold text-foreground">
             {t('categories')}
           </h2>
           <Link
             to="/browse"
-            className="flex items-center text-sm font-semibold text-bolt-700"
+            className="flex items-center text-sm font-semibold text-bolt-700 dark:text-bolt-300"
           >
             {t('browse')} <ChevronRight className="h-4 w-4" />
           </Link>
@@ -108,12 +108,12 @@ export function HomePage() {
             <Link
               key={c.id}
               to={`/browse?categoryId=${c.id}`}
-              className="flex flex-col items-center gap-1.5 rounded-2xl border border-steel-200 bg-white p-3 text-center shadow-sm transition hover:border-bolt-300 hover:shadow"
+              className="flex flex-col items-center gap-1.5 rounded-2xl border border-border bg-card p-3 text-center shadow-sm transition hover:border-bolt-300 hover:shadow"
             >
               <span className="text-2xl" aria-hidden>
                 {categoryIcons[c.slug] || '🔩'}
               </span>
-              <span className="text-[11px] font-semibold leading-tight text-steel-700">
+              <span className="text-[11px] font-semibold leading-tight text-foreground">
                 {i18n.language === 'sw' ? c.nameSw : c.nameEn}
               </span>
             </Link>
@@ -123,7 +123,7 @@ export function HomePage() {
 
       {/* Featured */}
       <section>
-        <h2 className="mb-3 font-display text-lg font-bold text-steel-900">
+        <h2 className="mb-3 font-display text-lg font-bold text-foreground">
           {t('featured')}
         </h2>
         {loading ? (
@@ -131,7 +131,7 @@ export function HomePage() {
             {Array.from({ length: 4 }).map((_, i) => (
               <div
                 key={i}
-                className="aspect-[3/4] animate-pulse rounded-2xl bg-steel-200/60"
+                className="aspect-[3/4] animate-pulse rounded-2xl bg-muted"
               />
             ))}
           </div>
@@ -143,7 +143,7 @@ export function HomePage() {
           </div>
         )}
         {!loading && listings.length === 0 && (
-          <p className="rounded-2xl border border-dashed border-steel-300 bg-white p-8 text-center text-sm text-steel-500">
+          <p className="rounded-2xl border border-dashed border-border bg-card p-8 text-center text-sm text-muted-foreground">
             No listings yet. Start the API and seed the database.
           </p>
         )}
@@ -156,10 +156,10 @@ export function HomePage() {
             <ShieldCheck className="h-6 w-6" />
           </span>
           <div>
-            <h2 className="font-display text-lg font-bold text-steel-900">
+            <h2 className="font-display text-lg font-bold text-foreground">
               {t('trustTitle')}
             </h2>
-            <p className="mt-1 text-sm text-steel-600">{t('trustBody')}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{t('trustBody')}</p>
           </div>
         </div>
         <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -171,15 +171,15 @@ export function HomePage() {
           ].map(({ icon: Icon, label }, i) => (
             <div
               key={label}
-              className="flex flex-col items-center gap-2 rounded-2xl bg-white p-4 text-center shadow-sm ring-1 ring-steel-100"
+              className="flex flex-col items-center gap-2 rounded-2xl bg-card p-4 text-center shadow-sm ring-1 ring-border"
             >
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-bolt-100 text-bolt-800">
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-bolt-100 text-bolt-800 dark:text-bolt-200">
                 <Icon className="h-4 w-4" />
               </span>
-              <span className="text-[11px] font-bold text-steel-400">
+              <span className="text-[11px] font-bold text-muted-foreground">
                 0{i + 1}
               </span>
-              <span className="text-xs font-semibold text-steel-800">
+              <span className="text-xs font-semibold text-foreground">
                 {label}
               </span>
             </div>
@@ -191,14 +191,14 @@ export function HomePage() {
       <section className="grid gap-3 sm:grid-cols-2">
         <Link
           to="/account/become-seller"
-          className="flex items-center gap-3 rounded-2xl border border-steel-200 bg-white p-4 shadow-sm transition hover:border-bolt-300"
+          className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm transition hover:border-bolt-300"
         >
-          <Package className="h-8 w-8 text-bolt-700" />
+          <Package className="h-8 w-8 text-bolt-700 dark:text-bolt-300" />
           <div>
-            <p className="font-display font-bold text-steel-900">
+            <p className="font-display font-bold text-foreground">
               {t('becomeSeller')}
             </p>
-            <p className="text-xs text-steel-500">List inventory & earn</p>
+            <p className="text-xs text-muted-foreground">List inventory & earn</p>
           </div>
         </Link>
         <Link
@@ -207,10 +207,10 @@ export function HomePage() {
         >
           <MegaphoneIcon />
           <div>
-            <p className="font-display font-bold text-steel-900">
+            <p className="font-display font-bold text-foreground">
               Promote a product
             </p>
-            <p className="text-xs text-steel-600">
+            <p className="text-xs text-muted-foreground">
               Subscribe to homepage ads
             </p>
           </div>

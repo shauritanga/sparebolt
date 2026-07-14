@@ -11,6 +11,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { SellerModule } from './seller/seller.module';
 import { AdsModule } from './ads/ads.module';
 import { UploadsModule } from './uploads/uploads.module';
+import { LocationsModule } from './locations/locations.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -28,6 +29,7 @@ import { AppService } from './app.service';
     SellerModule,
     AdsModule,
     UploadsModule,
+    LocationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

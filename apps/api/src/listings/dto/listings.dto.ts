@@ -46,6 +46,19 @@ export class SearchListingsDto {
   @IsEnum(PartCondition)
   condition?: PartCondition;
 
+  /** Genuine | Aftermarket | OEM | Refurbished type string */
+  @IsOptional()
+  @IsString()
+  partType?: string;
+
+  @IsOptional()
+  @IsString()
+  brand?: string;
+
+  @IsOptional()
+  @IsString()
+  partNumber?: string;
+
   @IsOptional()
   @Type(() => Number)
   @IsNumber()

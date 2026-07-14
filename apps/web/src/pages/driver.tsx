@@ -92,12 +92,12 @@ export function DriverPage() {
         <h1 className="font-display text-2xl font-extrabold">Driver</h1>
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-left">
           <Badge variant="warning">{driverProfile.status}</Badge>
-          <p className="mt-3 font-semibold text-steel-900">
+          <p className="mt-3 font-semibold text-foreground">
             {driverProfile.status === 'PENDING'
               ? 'Your application is under review'
               : 'You cannot accept jobs right now'}
           </p>
-          <p className="mt-2 text-sm text-steel-600">
+          <p className="mt-2 text-sm text-muted-foreground">
             {driverProfile.status === 'PENDING'
               ? 'An admin must verify your ID, vehicle, and licence before you go online.'
               : driverProfile.rejectionReason ||
@@ -122,14 +122,14 @@ export function DriverPage() {
         </Button>
       </div>
 
-      <div className="flex rounded-xl bg-steel-100 p-1">
+      <div className="flex rounded-xl bg-muted p-1">
         {(['available', 'active', 'earnings'] as const).map((t) => (
           <button
             key={t}
             type="button"
             onClick={() => setTab(t)}
             className={`flex-1 rounded-lg py-2 text-xs font-bold capitalize cursor-pointer min-h-[40px] ${
-              tab === t ? 'bg-white shadow-sm text-bolt-800' : 'text-steel-500'
+              tab === t ? 'bg-card shadow-sm text-bolt-800 dark:text-bolt-200' : 'text-muted-foreground'
             }`}
           >
             {t}
@@ -142,24 +142,24 @@ export function DriverPage() {
           {available.map((j) => (
             <li
               key={j.id}
-              className="rounded-2xl border border-steel-200 bg-white p-4 shadow-sm"
+              className="rounded-2xl border border-border bg-card p-4 shadow-sm"
             >
               <div className="flex justify-between">
-                <p className="font-mono text-xs text-steel-400">
+                <p className="font-mono text-xs text-muted-foreground">
                   {j.order.orderNumber}
                 </p>
-                <p className="font-bold text-bolt-800">{formatTZS(j.fee)}</p>
+                <p className="font-bold text-bolt-800 dark:text-bolt-200">{formatTZS(j.fee)}</p>
               </div>
               <p className="mt-1 flex items-start gap-1 text-sm">
-                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-bolt-700" />
+                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-bolt-700 dark:text-bolt-300" />
                 {j.order.address.street}
                 {j.order.address.area ? `, ${j.order.address.area}` : ''},{' '}
                 {j.order.address.city}
               </p>
-              <p className="mt-1 text-xs text-steel-500">
+              <p className="mt-1 text-xs text-muted-foreground">
                 {j.order.items.map((i) => i.title).join(', ')}
               </p>
-              <p className="text-xs text-steel-500">
+              <p className="text-xs text-muted-foreground">
                 Customer: {j.order.customer.firstName}{' '}
                 {j.order.customer.lastName}
               </p>
@@ -171,7 +171,7 @@ export function DriverPage() {
             </li>
           ))}
           {!available.length && (
-            <p className="py-10 text-center text-sm text-steel-500">
+            <p className="py-10 text-center text-sm text-muted-foreground">
               No nearby jobs right now
             </p>
           )}
@@ -185,7 +185,7 @@ export function DriverPage() {
             .map((j) => (
               <li
                 key={j.id}
-                className="rounded-2xl border border-steel-200 bg-white p-4"
+                className="rounded-2xl border border-border bg-card p-4"
               >
                 <div className="flex items-center justify-between">
                   <p className="font-mono text-xs">{j.order.orderNumber}</p>
@@ -197,7 +197,7 @@ export function DriverPage() {
                 {j.order.customer.phone && (
                   <a
                     href={`tel:${j.order.customer.phone}`}
-                    className="text-sm font-semibold text-bolt-700"
+                    className="text-sm font-semibold text-bolt-700 dark:text-bolt-300"
                   >
                     Call {j.order.customer.phone}
                   </a>
@@ -218,7 +218,7 @@ export function DriverPage() {
           {!mine.filter(
             (j) => j.status !== 'DELIVERED' && j.status !== 'REJECTED',
           ).length && (
-            <p className="py-10 text-center text-sm text-steel-500">
+            <p className="py-10 text-center text-sm text-muted-foreground">
               No active jobs
             </p>
           )}
@@ -227,18 +227,18 @@ export function DriverPage() {
 
       {tab === 'earnings' && earnings && (
         <div className="grid grid-cols-3 gap-3">
-          <div className="rounded-2xl border border-steel-200 bg-white p-4 text-center">
-            <p className="text-xs text-steel-400">Total</p>
-            <p className="font-display font-bold text-bolt-800">
+          <div className="rounded-2xl border border-border bg-card p-4 text-center">
+            <p className="text-xs text-muted-foreground">Total</p>
+            <p className="font-display font-bold text-bolt-800 dark:text-bolt-200">
               {formatTZS(earnings.totalEarnings)}
             </p>
           </div>
-          <div className="rounded-2xl border border-steel-200 bg-white p-4 text-center">
-            <p className="text-xs text-steel-400">Jobs</p>
+          <div className="rounded-2xl border border-border bg-card p-4 text-center">
+            <p className="text-xs text-muted-foreground">Jobs</p>
             <p className="font-display font-bold">{earnings.completedJobs}</p>
           </div>
-          <div className="rounded-2xl border border-steel-200 bg-white p-4 text-center">
-            <p className="text-xs text-steel-400">Rating</p>
+          <div className="rounded-2xl border border-border bg-card p-4 text-center">
+            <p className="text-xs text-muted-foreground">Rating</p>
             <p className="font-display font-bold">
               {earnings.ratingAvg.toFixed(1)}
             </p>

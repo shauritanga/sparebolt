@@ -1,438 +1,3016 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import {
+  AlertTriangle,
+  ArrowDownLeft,
+  ArrowUpRight,
+  BadgeCheck,
+  Banknote,
+  Bell,
+  Bolt,
+  Building2,
+  Car,
+  CheckCircle2,
+  ChevronRight,
+  ChevronUp,
+  Clock,
+  ExternalLink,
+  Eye,
+  FileCheck,
+  IdCard,
+  LayoutDashboard,
+  LogOut,
+  MapPin,
+  Moon,
+  Package,
+  PanelLeft,
+  PanelLeftClose,
+  Percent,
+  Phone,
+  Scale,
+  Search,
+  Settings,
+  Shield,
+  Store,
+  Sun,
+  Truck,
+  User,
+  UserX,
+  Users,
+  Wallet,
+  X,
+} from 'lucide-react';
 import { api } from '@/lib/api';
-import { formatTZS } from '@/lib/utils';
+import { cn, formatRelative, formatTZS } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { SafeImage } from '@/components/safe-image';
+import { useAuthStore } from '@/stores/auth-store';
+import { useTheme } from '@/hooks/use-theme';
+
+type TabId = 'overview' | 'sellers' | 'drivers' | 'disputes' | 'escrows';
+
+type Stats = {
+  users: number;
+  sellers: number;
+  drivers: number;
+  pendingSellers: number;
+  pendingDrivers: number;
+  listings: number;
+  orders: number;
+  escrowHeld: number;
+  escrowCount: number;
+  openDisputes: number;
+  needsAttention: number;
+};
+
+type EscrowRow = {
+  id: string;
+  amount: string | number;
+  platformFee?: string | number;
+  sellerAmount?: string | number;
+  status: string;
+  heldAt?: string;
+  releasedAt?: string | null;
+  refundedAt?: string | null;
+  notes?: string | null;
+  order: {
+    orderNumber: string;
+    status?: string;
+    total?: string | number;
+    createdAt?: string;
+    customer?: {
+      firstName: string;
+      lastName: string;
+      phone?: string | null;
+      email?: string | null;
+    };
+    items?: {
+      title: string;
+      quantity: number;
+      lineTotal: string | number;
+      sellerId?: string;
+    }[];
+    dispute?: { id: string; status: string; reason?: string } | null;
+  };
+};
+
+type SellerRow = {
+  id: string;
+  status: string;
+  businessName: string;
+  businessType?: string | null;
+  legalFullName?: string | null;
+  nationalId?: string | null;
+  nationalIdFrontUrl?: string | null;
+  nationalIdBackUrl?: string | null;
+  selfieUrl?: string | null;
+  shopExteriorUrl?: string | null;
+  shopInteriorUrl?: string | null;
+  city: string;
+  region?: string | null;
+  addressStreet?: string | null;
+  addressWard?: string | null;
+  payoutMethod?: string | null;
+  payoutAccountName?: string | null;
+  payoutPhone?: string | null;
+  createdAt?: string;
+  rejectionReason?: string | null;
+  user: {
+    firstName: string;
+    lastName: string;
+    phone?: string | null;
+    email?: string | null;
+  };
+};
+
+type DriverRow = {
+  id: string;
+  status: string;
+  legalFullName?: string | null;
+  nationalId?: string | null;
+  nationalIdFrontUrl?: string | null;
+  nationalIdBackUrl?: string | null;
+  selfieUrl?: string | null;
+  vehiclePlate: string;
+  vehicleType: string;
+  vehicleMake?: string | null;
+  vehiclePhotoSideUrl?: string | null;
+  vehiclePhotoRearUrl?: string | null;
+  vehiclePhotoWithDriverUrl?: string | null;
+  licenseNumber: string;
+  licensePhotoUrl?: string | null;
+  city: string;
+  addressStreet?: string | null;
+  payoutAccountName?: string | null;
+  payoutPhone?: string | null;
+  createdAt?: string;
+  rejectionReason?: string | null;
+  user: {
+    firstName: string;
+    lastName: string;
+    phone?: string | null;
+    email?: string | null;
+  };
+};
+
+const NAV: {
+  id: TabId;
+  label: string;
+  icon: typeof LayoutDashboard;
+}[] = [
+  { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+  { id: 'sellers', label: 'Sellers', icon: Store },
+  { id: 'drivers', label: 'Drivers', icon: Truck },
+  { id: 'disputes', label: 'Disputes', icon: Scale },
+  { id: 'escrows', label: 'Escrows', icon: Wallet },
+];
+
+function statusBadge(status: string) {
+  const v =
+    status === 'APPROVED' || status === 'COMPLETED' || status === 'CLOSED'
+      ? 'success'
+      : status === 'PENDING' || status === 'OPEN' || status === 'HELD'
+        ? 'warning'
+        : status === 'REJECTED' || status === 'SUSPENDED'
+          ? 'danger'
+          : 'muted';
+  return <Badge variant={v as 'success'}>{status.replace(/_/g, ' ')}</Badge>;
+}
+
+function UserAvatar({
+  name,
+  size = 'md',
+  className,
+}: {
+  name: string;
+  size?: 'sm' | 'md' | 'lg';
+  className?: string;
+}) {
+  const initials = name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() ?? '')
+    .join('');
+  const sizeCls =
+    size === 'sm' ? 'h-8 w-8 text-[10px]' : size === 'lg' ? 'h-11 w-11 text-sm' : 'h-9 w-9 text-xs';
+  return (
+    <span
+      className={cn(
+        'inline-flex shrink-0 items-center justify-center rounded-full bg-bolt-700 font-bold text-white',
+        sizeCls,
+        className,
+      )}
+      aria-hidden
+    >
+      {initials || 'A'}
+    </span>
+  );
+}
 
 export function AdminPage() {
-  const [dash, setDash] = useState<{
-    stats: {
-      users: number;
-      sellers: number;
-      drivers: number;
-      listings: number;
-      orders: number;
-      escrowHeld: number;
-      openDisputes: number;
-    };
-    recentOrders: {
+  const navigate = useNavigate();
+  const user = useAuthStore((s) => s.user);
+  const logout = useAuthStore((s) => s.logout);
+  const { isDark, toggleTheme } = useTheme();
+  const [tab, setTab] = useState<TabId>('overview');
+  const [sidebarOpen, setSidebarOpen] = useState(false); // mobile drawer
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false); // desktop collapse
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
+  const sidebarMenuRef = useRef<HTMLDivElement>(null);
+  const headerMenuRef = useRef<HTMLDivElement>(null);
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [recentOrders, setRecentOrders] = useState<
+    {
       id: string;
       orderNumber: string;
       status: string;
       total: string | number;
+      createdAt?: string;
       customer: { firstName: string; lastName: string };
-    }[];
-  } | null>(null);
+    }[]
+  >([]);
+  const [sellers, setSellers] = useState<SellerRow[]>([]);
+  const [drivers, setDrivers] = useState<DriverRow[]>([]);
   const [disputes, setDisputes] = useState<
     {
       id: string;
       reason: string;
+      description?: string;
       status: string;
+      createdAt?: string;
       order: { orderNumber: string; id: string };
     }[]
   >([]);
-  const [tab, setTab] = useState<
-    'overview' | 'sellers' | 'drivers' | 'disputes' | 'escrows'
-  >('overview');
-  const [escrows, setEscrows] = useState<
-    {
-      id: string;
-      amount: string | number;
-      status: string;
-      order: { orderNumber: string };
-    }[]
-  >([]);
-  const [drivers, setDrivers] = useState<
-    {
-      id: string;
-      status: string;
-      legalFullName?: string | null;
-      nationalId?: string | null;
-      vehiclePlate: string;
-      vehicleType: string;
-      city: string;
-      licenseNumber: string;
-      payoutAccountName?: string | null;
-      selfieUrl?: string | null;
-      user: {
-        firstName: string;
-        lastName: string;
-        phone?: string | null;
-      };
-    }[]
-  >([]);
-  const [sellers, setSellers] = useState<
-    {
-      id: string;
-      status: string;
-      businessName: string;
-      businessType?: string | null;
-      legalFullName?: string | null;
-      nationalId?: string | null;
-      city: string;
-      payoutAccountName?: string | null;
-      addressStreet?: string | null;
-      user: {
-        firstName: string;
-        lastName: string;
-        phone?: string | null;
-      };
-    }[]
-  >([]);
+  const [escrows, setEscrows] = useState<EscrowRow[]>([]);
 
-  const loadDrivers = () => {
-    void api.get('/admin/drivers').then((r) => setDrivers(r.data));
-  };
-  const loadSellers = () => {
-    void api.get('/admin/sellers').then((r) => setSellers(r.data));
+  const [review, setReview] = useState<
+    | { type: 'seller'; data: SellerRow }
+    | { type: 'driver'; data: DriverRow }
+    | null
+  >(null);
+  const [rejectOpen, setRejectOpen] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
+
+  const loadAll = async () => {
+    setLoading(true);
+    try {
+      const [dash, sellersRes, driversRes, disputesRes, escrowsRes] =
+        await Promise.all([
+          api.get('/admin/dashboard'),
+          api.get('/admin/sellers'),
+          api.get('/admin/drivers'),
+          api.get('/admin/disputes'),
+          api.get('/admin/escrows'),
+        ]);
+      setStats(dash.data.stats);
+      setRecentOrders(dash.data.recentOrders ?? []);
+      setSellers(sellersRes.data ?? []);
+      setDrivers(driversRes.data ?? []);
+      setDisputes(disputesRes.data ?? []);
+      setEscrows(escrowsRes.data ?? []);
+    } catch {
+      toast.error('Failed to load admin data');
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
-    void api.get('/admin/dashboard').then((r) => setDash(r.data));
-    void api.get('/admin/disputes').then((r) => setDisputes(r.data));
-    void api.get('/admin/escrows').then((r) => setEscrows(r.data));
-    loadDrivers();
-    loadSellers();
+    void loadAll();
   }, []);
 
-  const setDriverStatus = async (
+  // Close user menus on outside click
+  useEffect(() => {
+    if (!userMenuOpen && !headerMenuOpen) return;
+    const onDown = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (
+        userMenuOpen &&
+        sidebarMenuRef.current &&
+        !sidebarMenuRef.current.contains(t)
+      ) {
+        setUserMenuOpen(false);
+      }
+      if (
+        headerMenuOpen &&
+        headerMenuRef.current &&
+        !headerMenuRef.current.contains(t)
+      ) {
+        setHeaderMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [userMenuOpen, headerMenuOpen]);
+
+  const displayName = user
+    ? `${user.firstName} ${user.lastName}`.trim() || 'Admin'
+    : 'Admin';
+  const displayEmail = user?.email || user?.phone || 'Administrator';
+
+  const handleLogout = () => {
+    logout();
+    toast.success('Signed out');
+    void navigate('/auth/login');
+  };
+
+  const pendingSellers = stats?.pendingSellers ?? 0;
+  const pendingDrivers = stats?.pendingDrivers ?? 0;
+  const openDisputes = stats?.openDisputes ?? 0;
+
+  const badgeFor = (id: TabId) => {
+    if (id === 'sellers' && pendingSellers) return pendingSellers;
+    if (id === 'drivers' && pendingDrivers) return pendingDrivers;
+    if (id === 'disputes' && openDisputes) return openDisputes;
+    return 0;
+  };
+
+  const setStatus = async (
+    type: 'seller' | 'driver',
     id: string,
     status: 'APPROVED' | 'REJECTED' | 'SUSPENDED',
+    reason?: string,
   ) => {
+    setActionLoading(true);
     try {
-      await api.patch(`/admin/drivers/${id}/status`, {
-        status,
-        reason:
-          status === 'REJECTED' ? 'Documents incomplete or invalid' : undefined,
-      });
-      toast.success(`Driver ${status.toLowerCase()}`);
-      loadDrivers();
+      const path =
+        type === 'seller'
+          ? `/admin/sellers/${id}/status`
+          : `/admin/drivers/${id}/status`;
+      await api.patch(path, { status, reason });
+      toast.success(`${type === 'seller' ? 'Seller' : 'Driver'} ${status.toLowerCase()}`);
+      setReview(null);
+      setRejectOpen(false);
+      setRejectReason('');
+      await loadAll();
     } catch {
-      toast.error('Failed to update driver');
+      toast.error('Action failed');
+    } finally {
+      setActionLoading(false);
     }
   };
 
-  const setSellerStatus = async (
+  const resolveDispute = async (
     id: string,
-    status: 'APPROVED' | 'REJECTED' | 'SUSPENDED',
+    resolution: 'customer' | 'seller',
   ) => {
-    try {
-      await api.patch(`/admin/sellers/${id}/status`, {
-        status,
-        reason:
-          status === 'REJECTED' ? 'Documents incomplete or invalid' : undefined,
-      });
-      toast.success(`Seller ${status.toLowerCase()}`);
-      loadSellers();
-    } catch {
-      toast.error('Failed to update seller');
-    }
-  };
-
-  const resolve = async (id: string, resolution: 'customer' | 'seller') => {
     try {
       await api.post(`/admin/disputes/${id}/resolve`, { resolution });
       toast.success('Dispute resolved');
-      const r = await api.get('/admin/disputes');
-      setDisputes(r.data);
+      await loadAll();
     } catch {
-      toast.error('Failed');
+      toast.error('Failed to resolve');
     }
   };
 
-  if (!dash) {
-    return <div className="h-40 animate-pulse rounded-2xl bg-steel-200/60" />;
-  }
+  const goTab = (id: TabId) => {
+    setTab(id);
+    setSidebarOpen(false);
+  };
 
-  const s = dash.stats;
+  const isDesktopSidebar =
+    typeof window !== 'undefined' &&
+    window.matchMedia('(min-width: 1024px)').matches;
+  // Icon: closed panel when collapsed (desktop) or closed drawer (mobile)
+  const sidebarIsCollapsed = isDesktopSidebar
+    ? sidebarCollapsed
+    : !sidebarOpen;
+
+  const toggleSidebar = () => {
+    // Mobile: open/close drawer. Desktop: collapse/expand.
+    if (
+      typeof window !== 'undefined' &&
+      window.matchMedia('(min-width: 1024px)').matches
+    ) {
+      setSidebarCollapsed((c) => !c);
+      setUserMenuOpen(false);
+    } else {
+      setSidebarOpen((o) => !o);
+    }
+  };
 
   return (
-    <div className="mx-auto max-w-4xl space-y-5">
-      <h1 className="font-display text-2xl font-extrabold">Admin</h1>
+    <div className="flex min-h-dvh bg-background">
+      {/* Mobile sidebar backdrop */}
+      {sidebarOpen && (
+        <button
+          type="button"
+          className="fixed inset-0 z-40 bg-black/40 lg:hidden cursor-pointer admin-backdrop-in"
+          aria-label="Close menu"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
 
-      <div className="flex gap-1 overflow-x-auto rounded-xl bg-steel-100 p-1">
-        {(
-          ['overview', 'sellers', 'drivers', 'disputes', 'escrows'] as const
-        ).map((t) => (
+      {/* Sidebar */}
+      <aside
+        className={cn(
+          'fixed inset-y-0 left-0 z-50 flex flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-all duration-300 ease-out lg:static lg:translate-x-0',
+          sidebarCollapsed ? 'lg:w-[4.5rem]' : 'lg:w-64',
+          'w-64',
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full',
+        )}
+      >
+        <div
+          className={cn(
+            'flex h-16 items-center border-b border-sidebar-border',
+            sidebarCollapsed ? 'justify-center px-2' : 'gap-2 px-5',
+          )}
+        >
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-bolt-600">
+            <Bolt className="h-5 w-5 fill-current" />
+          </span>
+          {!sidebarCollapsed && (
+            <div className="min-w-0">
+              <p className="font-display text-sm font-extrabold tracking-tight">
+                SpareBolt
+              </p>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-sidebar-muted">
+                Admin console
+              </p>
+            </div>
+          )}
+        </div>
+
+        <nav className={cn('flex-1 space-y-1 p-3', sidebarCollapsed && 'px-2')}>
+          {NAV.map(({ id, label, icon: Icon }) => {
+            const count = badgeFor(id);
+            const active = tab === id;
+            return (
+              <button
+                key={id}
+                type="button"
+                title={label}
+                onClick={() => goTab(id)}
+                className={cn(
+                  'relative flex w-full items-center rounded-xl text-sm font-semibold transition-all duration-200 ease-out cursor-pointer min-h-[44px]',
+                  sidebarCollapsed
+                    ? 'justify-center px-0 py-2.5'
+                    : 'gap-3 px-3 py-2.5',
+                  active
+                    ? 'bg-bolt-600 text-white shadow-sm shadow-bolt-900/20'
+                    : 'text-sidebar-muted hover:bg-sidebar-accent hover:text-sidebar-foreground',
+                )}
+              >
+                <Icon
+                  className={cn(
+                    'h-4 w-4 shrink-0 transition-transform duration-200',
+                    active && 'scale-110',
+                  )}
+                />
+                {!sidebarCollapsed && (
+                  <>
+                    <span className="flex-1 text-left">{label}</span>
+                    {count > 0 && (
+                      <span
+                        className={cn(
+                          'admin-badge-pop flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold',
+                          active
+                            ? 'bg-white text-bolt-800'
+                            : 'bg-amber-signal text-steel-950',
+                        )}
+                      >
+                        {count}
+                      </span>
+                    )}
+                  </>
+                )}
+                {sidebarCollapsed && count > 0 && (
+                  <span className="absolute ml-6 mt-[-1.25rem] h-2 w-2 rounded-full bg-amber-signal" />
+                )}
+              </button>
+            );
+          })}
+        </nav>
+
+        <div
+          className={cn(
+            'relative border-t border-sidebar-border p-3',
+            sidebarCollapsed && 'px-2',
+          )}
+          ref={sidebarMenuRef}
+        >
+          {(stats?.needsAttention ?? 0) > 0 && !sidebarCollapsed && (
+            <div className="mb-2 rounded-xl bg-amber-500/15 px-3 py-2 text-xs text-amber-100">
+              <p className="font-bold text-amber-signal">
+                {stats?.needsAttention} need attention
+              </p>
+            </div>
+          )}
+
+          {userMenuOpen && (
+            <UserPopupMenu
+              className={cn(
+                'absolute z-50',
+                sidebarCollapsed
+                  ? 'bottom-3 left-[calc(100%+0.5rem)] w-56'
+                  : 'bottom-[calc(100%-0.25rem)] left-3 right-3',
+              )}
+              onClose={() => setUserMenuOpen(false)}
+              onLogout={handleLogout}
+            />
+          )}
+
           <button
-            key={t}
             type="button"
-            onClick={() => setTab(t)}
-            className={`shrink-0 flex-1 rounded-lg px-2 py-2 text-xs font-bold capitalize cursor-pointer ${
-              tab === t ? 'bg-white shadow-sm' : 'text-steel-500'
-            }`}
+            onClick={() => {
+              setUserMenuOpen((o) => !o);
+              setHeaderMenuOpen(false);
+            }}
+            className={cn(
+              'flex w-full items-center rounded-xl text-left transition cursor-pointer hover:bg-sidebar-accent',
+              sidebarCollapsed ? 'justify-center p-2' : 'gap-3 px-2.5 py-2.5',
+              userMenuOpen && 'bg-sidebar-accent',
+            )}
+            aria-haspopup="menu"
+            aria-expanded={userMenuOpen}
+            title={displayName}
           >
-            {t}
+            <UserAvatar name={displayName} />
+            {!sidebarCollapsed && (
+              <>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-sidebar-foreground">
+                    {displayName}
+                  </p>
+                  <p className="truncate text-[11px] text-sidebar-muted">
+                    {displayEmail}
+                  </p>
+                </div>
+                <ChevronUp
+                  className={cn(
+                    'h-4 w-4 shrink-0 text-sidebar-muted transition',
+                    !userMenuOpen && 'rotate-180',
+                  )}
+                />
+              </>
+            )}
+          </button>
+        </div>
+      </aside>
+
+      {/* Main */}
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="sticky top-0 z-30 flex h-16 items-center gap-2 border-b border-border bg-card/95 px-4 backdrop-blur-md lg:px-6">
+          {/* Collapse / expand sidebar */}
+          <button
+            type="button"
+            className="flex h-10 w-10 shrink-0 items-center justify-center text-muted-foreground transition-all duration-200 hover:text-foreground hover:scale-105 active:scale-95 cursor-pointer"
+            onClick={toggleSidebar}
+            aria-label={
+              sidebarIsCollapsed ? 'Expand sidebar' : 'Collapse sidebar'
+            }
+            title="Toggle sidebar"
+          >
+            {sidebarIsCollapsed ? (
+              <PanelLeft className="h-5 w-5" />
+            ) : (
+              <PanelLeftClose className="h-5 w-5" />
+            )}
+          </button>
+
+          {/* Active menu title only */}
+          <h1
+            key={tab}
+            className="min-w-0 flex-1 truncate font-display text-lg font-extrabold text-foreground admin-fade-in lg:text-xl"
+          >
+            {NAV.find((n) => n.id === tab)?.label}
+          </h1>
+
+          {/* Right: plain icons (no container borders) */}
+          <div className="flex items-center gap-0.5 sm:gap-1">
+            <button
+              type="button"
+              className="relative flex h-10 w-10 items-center justify-center text-muted-foreground transition-all duration-200 hover:text-foreground hover:scale-105 active:scale-95 cursor-pointer"
+              aria-label="Notifications"
+              onClick={() => toast.message('No new admin notifications')}
+            >
+              <Bell className="h-5 w-5" />
+              {(stats?.needsAttention ?? 0) > 0 && (
+                <span className="absolute right-2.5 top-2.5 h-1.5 w-1.5 rounded-full bg-danger admin-badge-pop" />
+              )}
+            </button>
+
+            <button
+              type="button"
+              className="flex h-10 w-10 items-center justify-center text-muted-foreground transition-all duration-200 hover:text-foreground hover:scale-105 active:scale-95 cursor-pointer"
+              aria-label={
+                isDark ? 'Switch to light mode' : 'Switch to dark mode'
+              }
+              onClick={toggleTheme}
+            >
+              {isDark ? (
+                <Sun className="h-5 w-5" />
+              ) : (
+                <Moon className="h-5 w-5" />
+              )}
+            </button>
+
+            <div className="relative" ref={headerMenuRef}>
+              <button
+                type="button"
+                className="flex h-10 w-10 items-center justify-center cursor-pointer"
+                aria-label="Account menu"
+                aria-haspopup="menu"
+                aria-expanded={headerMenuOpen}
+                onClick={() => {
+                  setHeaderMenuOpen((o) => !o);
+                  setUserMenuOpen(false);
+                }}
+              >
+                <UserAvatar name={displayName} size="sm" />
+              </button>
+              {headerMenuOpen && (
+                <UserPopupMenu
+                  className="absolute right-0 top-[calc(100%+0.5rem)] z-50 w-56"
+                  onClose={() => setHeaderMenuOpen(false)}
+                  onLogout={handleLogout}
+                />
+              )}
+            </div>
+          </div>
+        </header>
+
+        <main className="flex-1 overflow-auto p-4 lg:p-8">
+          {loading && !stats ? (
+            <div className="admin-stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="h-24 animate-pulse rounded-2xl bg-muted"
+                />
+              ))}
+            </div>
+          ) : (
+            <div key={tab} className="admin-fade-up">
+              {tab === 'overview' && stats && (
+                <Overview
+                  stats={stats}
+                  recentOrders={recentOrders}
+                  onJump={goTab}
+                />
+              )}
+
+              {tab === 'sellers' && (
+                <SellersPanel
+                  sellers={sellers}
+                  onReview={(s) => setReview({ type: 'seller', data: s })}
+                />
+              )}
+
+              {tab === 'drivers' && (
+                <DriversPanel
+                  drivers={drivers}
+                  onReview={(d) => setReview({ type: 'driver', data: d })}
+                />
+              )}
+
+              {tab === 'disputes' && (
+                <section className="space-y-4">
+                  <h2 className="font-display text-lg font-bold">
+                    Disputes ({disputes.length})
+                  </h2>
+                  <ul className="admin-stagger space-y-3">
+                    {disputes.map((d) => (
+                      <li
+                        key={d.id}
+                        className="rounded-2xl border border-border bg-card p-4 shadow-sm"
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div>
+                            <p className="font-mono text-xs text-muted-foreground">
+                              {d.order.orderNumber}
+                            </p>
+                            <p className="mt-1 font-semibold text-foreground">
+                              {d.reason}
+                            </p>
+                            {d.description && (
+                              <p className="mt-1 text-sm text-muted-foreground">
+                                {d.description}
+                              </p>
+                            )}
+                            {d.createdAt && (
+                              <p className="mt-1 text-xs text-muted-foreground">
+                                Opened {formatRelative(d.createdAt)}
+                              </p>
+                            )}
+                          </div>
+                          {statusBadge(d.status)}
+                        </div>
+                        {d.status === 'OPEN' && (
+                          <div className="mt-4 flex flex-wrap gap-2">
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              onClick={() =>
+                                void resolveDispute(d.id, 'customer')
+                              }
+                            >
+                              Refund customer
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={() =>
+                                void resolveDispute(d.id, 'seller')
+                              }
+                            >
+                              Release to seller
+                            </Button>
+                          </div>
+                        )}
+                      </li>
+                    ))}
+                    {!disputes.length && (
+                      <Empty title="No disputes" body="All clear for now." />
+                    )}
+                  </ul>
+                </section>
+              )}
+
+              {tab === 'escrows' && <EscrowPanel escrows={escrows} />}
+            </div>
+          )}
+        </main>
+      </div>
+
+      {/* Review drawer */}
+      {review && (
+        <ReviewDrawer
+          review={review}
+          loading={actionLoading}
+          onClose={() => {
+            setReview(null);
+            setRejectOpen(false);
+          }}
+          onApprove={() =>
+            void setStatus(review.type, review.data.id, 'APPROVED')
+          }
+          onReject={() => setRejectOpen(true)}
+          onSuspend={() =>
+            void setStatus(review.type, review.data.id, 'SUSPENDED')
+          }
+        />
+      )}
+
+      {/* Reject reason modal */}
+      {rejectOpen && review && (
+        <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/50 p-4 sm:items-center admin-backdrop-in">
+          <div className="w-full max-w-md rounded-2xl bg-card p-5 shadow-xl admin-modal-in">
+            <h3 className="font-display text-lg font-bold">Reject application</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Add a short reason (shown to the applicant).
+            </p>
+            <textarea
+              className="mt-3 min-h-24 w-full rounded-xl border border-border p-3 text-sm"
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="Documents incomplete, ID mismatch…"
+            />
+            <div className="mt-4 flex gap-2">
+              <Button
+                variant="secondary"
+                className="flex-1"
+                onClick={() => setRejectOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                className="flex-1"
+                loading={actionLoading}
+                onClick={() =>
+                  void setStatus(
+                    review.type,
+                    review.data.id,
+                    'REJECTED',
+                    rejectReason || 'Documents incomplete or invalid',
+                  )
+                }
+              >
+                Confirm reject
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Overview({
+  stats,
+  recentOrders,
+  onJump,
+}: {
+  stats: Stats;
+  recentOrders: {
+    id: string;
+    orderNumber: string;
+    status: string;
+    total: string | number;
+    createdAt?: string;
+    customer: { firstName: string; lastName: string };
+  }[];
+  onJump: (t: TabId) => void;
+}) {
+  const kpis = [
+    {
+      label: 'Users',
+      value: stats.users,
+      icon: Users,
+      tone: 'bg-sky-50 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300',
+    },
+    {
+      label: 'Approved sellers',
+      value: stats.sellers,
+      icon: Store,
+      tone: 'bg-bolt-50 dark:bg-bolt-950/50 text-bolt-800 dark:text-bolt-200',
+      sub: stats.pendingSellers
+        ? `${stats.pendingSellers} pending`
+        : undefined,
+      onClick: () => onJump('sellers'),
+    },
+    {
+      label: 'Approved drivers',
+      value: stats.drivers,
+      icon: Truck,
+      tone: 'bg-violet-50 text-violet-700 dark:bg-violet-950/50 dark:text-violet-300',
+      sub: stats.pendingDrivers
+        ? `${stats.pendingDrivers} pending`
+        : undefined,
+      onClick: () => onJump('drivers'),
+    },
+    {
+      label: 'Active listings',
+      value: stats.listings,
+      icon: Package,
+      tone: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300',
+    },
+    {
+      label: 'Orders',
+      value: stats.orders,
+      icon: CheckCircle2,
+      tone: 'bg-background text-foreground/90',
+    },
+    {
+      label: 'Escrow held',
+      value: formatTZS(stats.escrowHeld),
+      icon: Wallet,
+      tone: 'bg-amber-50 text-amber-800 dark:bg-amber-950/50 dark:text-amber-200',
+      sub: `${stats.escrowCount} open`,
+      onClick: () => onJump('escrows'),
+    },
+    {
+      label: 'Open disputes',
+      value: stats.openDisputes,
+      icon: AlertTriangle,
+      tone: 'bg-red-50 text-red-700 dark:bg-red-950/50 dark:text-red-300',
+      onClick: () => onJump('disputes'),
+    },
+    {
+      label: 'Needs attention',
+      value: stats.needsAttention,
+      icon: Shield,
+      tone: 'bg-amber-signal/20 text-amber-900 dark:text-amber-200',
+    },
+  ];
+
+  return (
+    <div className="space-y-8">
+      <div className="admin-stagger grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {kpis.map((k) => {
+          const Icon = k.icon;
+          const Comp = k.onClick ? 'button' : 'div';
+          return (
+            <Comp
+              key={k.label}
+              type={k.onClick ? 'button' : undefined}
+              onClick={k.onClick}
+              className={cn(
+                'rounded-2xl border border-border bg-card p-4 text-left shadow-sm',
+                k.onClick &&
+                  'cursor-pointer transition-all duration-200 hover:border-bolt-300 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0',
+              )}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                  {k.label}
+                </p>
+                <span
+                  className={cn(
+                    'flex h-9 w-9 items-center justify-center rounded-xl',
+                    k.tone,
+                  )}
+                >
+                  <Icon className="h-4 w-4" />
+                </span>
+              </div>
+              <p className="mt-2 font-display text-2xl font-extrabold tabular-nums text-foreground">
+                {k.value}
+              </p>
+              {k.sub && (
+                <p className="mt-1 text-xs font-semibold text-amber-700">
+                  {k.sub}
+                </p>
+              )}
+            </Comp>
+          );
+        })}
+      </div>
+
+      <div className="rounded-2xl border border-border bg-card shadow-sm">
+        <div className="flex items-center justify-between border-b border-border px-4 py-3">
+          <h2 className="font-display font-bold text-foreground">
+            Recent orders
+          </h2>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[520px] text-left text-sm">
+            <thead className="border-b border-border/60 text-xs font-bold uppercase text-muted-foreground">
+              <tr>
+                <th className="px-4 py-2">Order</th>
+                <th className="px-4 py-2">Customer</th>
+                <th className="px-4 py-2">Total</th>
+                <th className="px-4 py-2">Status</th>
+                <th className="px-4 py-2">When</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {recentOrders.map((o) => (
+                <tr key={o.id} className="hover:bg-muted/50">
+                  <td className="px-4 py-3 font-mono text-xs">
+                    {o.orderNumber}
+                  </td>
+                  <td className="px-4 py-3">
+                    {o.customer.firstName} {o.customer.lastName}
+                  </td>
+                  <td className="px-4 py-3 font-semibold tabular-nums">
+                    {formatTZS(o.total)}
+                  </td>
+                  <td className="px-4 py-3">{statusBadge(o.status)}</td>
+                  <td className="px-4 py-3 text-xs text-muted-foreground">
+                    {o.createdAt ? formatRelative(o.createdAt) : '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {!recentOrders.length && (
+            <p className="py-10 text-center text-sm text-muted-foreground">
+              No orders yet
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── KYC application queues (sellers / drivers) ─────────────────────────────
+
+type AppFilter = 'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED' | 'SUSPENDED';
+
+function applicationAgingDays(createdAt?: string) {
+  if (!createdAt) return 0;
+  return Math.max(
+    0,
+    Math.floor((Date.now() - new Date(createdAt).getTime()) / 86_400_000),
+  );
+}
+
+function ApplicationStatusPill({ status }: { status: string }) {
+  const styles: Record<string, string> = {
+    PENDING:
+      'bg-amber-100 text-amber-900 ring-amber-200 dark:bg-amber-950/50 dark:text-amber-200 dark:ring-amber-800',
+    APPROVED:
+      'bg-emerald-100 text-emerald-900 ring-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-200 dark:ring-emerald-800',
+    REJECTED:
+      'bg-red-100 text-red-900 ring-red-200 dark:bg-red-950/50 dark:text-red-200 dark:ring-red-800',
+    SUSPENDED:
+      'bg-violet-100 text-violet-900 ring-violet-200 dark:bg-violet-950/50 dark:text-violet-200 dark:ring-violet-800',
+  };
+  const dots: Record<string, string> = {
+    PENDING: 'bg-amber-500',
+    APPROVED: 'bg-emerald-500',
+    REJECTED: 'bg-red-500',
+    SUSPENDED: 'bg-violet-500',
+  };
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold ring-1 ring-inset',
+        styles[status] || 'bg-muted text-muted-foreground ring-border',
+      )}
+    >
+      <span
+        className={cn(
+          'h-1.5 w-1.5 rounded-full',
+          dots[status] || 'bg-muted-foreground',
+        )}
+      />
+      {status.charAt(0) + status.slice(1).toLowerCase()}
+    </span>
+  );
+}
+
+function DocCompleteness({
+  present,
+  total,
+}: {
+  present: number;
+  total: number;
+}) {
+  const pct = total ? Math.round((present / total) * 100) : 0;
+  const complete = present === total && total > 0;
+  return (
+    <div className="min-w-[7.5rem]">
+      <div className="mb-1 flex items-center justify-between gap-2 text-[10px] font-bold">
+        <span
+          className={cn(
+            complete
+              ? 'text-emerald-700 dark:text-emerald-300'
+              : 'text-muted-foreground',
+          )}
+        >
+          {present}/{total} docs
+        </span>
+        <span className="tabular-nums text-muted-foreground">{pct}%</span>
+      </div>
+      <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+        <div
+          className={cn(
+            'h-full rounded-full transition-all',
+            complete ? 'bg-emerald-500' : pct >= 60 ? 'bg-bolt-500' : 'bg-amber-signal',
+          )}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function sellerDocUrls(s: SellerRow) {
+  return [
+    { label: 'ID front', url: s.nationalIdFrontUrl },
+    { label: 'ID back', url: s.nationalIdBackUrl },
+    { label: 'Selfie', url: s.selfieUrl },
+    { label: 'Shop exterior', url: s.shopExteriorUrl },
+    { label: 'Shop interior', url: s.shopInteriorUrl },
+  ];
+}
+
+function driverDocUrls(d: DriverRow) {
+  return [
+    { label: 'ID front', url: d.nationalIdFrontUrl },
+    { label: 'ID back', url: d.nationalIdBackUrl },
+    { label: 'Selfie', url: d.selfieUrl },
+    { label: 'Vehicle side', url: d.vehiclePhotoSideUrl },
+    { label: 'Vehicle rear', url: d.vehiclePhotoRearUrl },
+    { label: 'With vehicle', url: d.vehiclePhotoWithDriverUrl },
+    { label: 'Licence', url: d.licensePhotoUrl },
+  ];
+}
+
+function countDocs(urls: { url?: string | null }[]) {
+  return urls.filter((u) => Boolean(u.url)).length;
+}
+
+function useAppQueueFilter<T extends { status: string }>(
+  items: T[],
+  matchSearch: (item: T, q: string) => boolean,
+  defaultFilter: AppFilter = 'PENDING',
+) {
+  const [filter, setFilter] = useState<AppFilter>(defaultFilter);
+  const [search, setSearch] = useState('');
+
+  const counts = useMemo(() => {
+    const c: Record<AppFilter, number> = {
+      ALL: items.length,
+      PENDING: 0,
+      APPROVED: 0,
+      REJECTED: 0,
+      SUSPENDED: 0,
+    };
+    for (const item of items) {
+      if (item.status in c) c[item.status as AppFilter] += 1;
+    }
+    return c;
+  }, [items]);
+
+  const filtered = useMemo(() => {
+    let list = items;
+    if (filter !== 'ALL') list = list.filter((i) => i.status === filter);
+    const q = search.trim().toLowerCase();
+    if (q) list = list.filter((i) => matchSearch(i, q));
+    return list;
+  }, [items, filter, search, matchSearch]);
+
+  return { filter, setFilter, search, setSearch, counts, filtered };
+}
+
+function AppQueueKpis({
+  counts,
+  agingPending,
+  kind,
+}: {
+  counts: Record<AppFilter, number>;
+  agingPending: number;
+  kind: 'seller' | 'driver';
+}) {
+  const label = kind === 'seller' ? 'sellers' : 'drivers';
+  const kpis = [
+    {
+      label: 'Pending review',
+      value: counts.PENDING,
+      sub:
+        agingPending > 0
+          ? `${agingPending} waiting 3d+`
+          : 'In verification queue',
+      icon: Clock,
+      tone: 'bg-amber-50 text-amber-800 dark:bg-amber-950/50 dark:text-amber-200',
+      accent: 'border-l-amber-signal',
+    },
+    {
+      label: 'Approved',
+      value: counts.APPROVED,
+      sub: `Active ${label}`,
+      icon: BadgeCheck,
+      tone: 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200',
+      accent: 'border-l-emerald-500',
+    },
+    {
+      label: 'Rejected',
+      value: counts.REJECTED,
+      sub: 'Need re-application',
+      icon: UserX,
+      tone: 'bg-red-50 text-red-800 dark:bg-red-950/50 dark:text-red-200',
+      accent: 'border-l-red-500',
+    },
+    {
+      label: 'Suspended',
+      value: counts.SUSPENDED,
+      sub: 'Restricted access',
+      icon: Shield,
+      tone: 'bg-violet-50 text-violet-800 dark:bg-violet-950/50 dark:text-violet-200',
+      accent: 'border-l-violet-500',
+    },
+  ];
+
+  return (
+    <div className="admin-stagger grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      {kpis.map((k) => {
+        const Icon = k.icon;
+        return (
+          <div
+            key={k.label}
+            className={cn(
+              'rounded-2xl border border-border border-l-4 bg-card p-4 shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5',
+              k.accent,
+            )}
+          >
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                {k.label}
+              </p>
+              <span
+                className={cn(
+                  'flex h-9 w-9 items-center justify-center rounded-xl transition-transform duration-200 group-hover:scale-105',
+                  k.tone,
+                )}
+              >
+                <Icon className="h-4 w-4" />
+              </span>
+            </div>
+            <p className="mt-2 font-display text-2xl font-extrabold tabular-nums text-foreground">
+              {k.value}
+            </p>
+            <p className="mt-1 text-xs font-semibold text-muted-foreground">
+              {k.sub}
+            </p>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function AppQueueToolbar({
+  search,
+  onSearch,
+  filter,
+  onFilter,
+  counts,
+  placeholder,
+}: {
+  search: string;
+  onSearch: (v: string) => void;
+  filter: AppFilter;
+  onFilter: (v: AppFilter) => void;
+  counts: Record<AppFilter, number>;
+  placeholder: string;
+}) {
+  const filters: { id: AppFilter; label: string }[] = [
+    { id: 'PENDING', label: 'Pending' },
+    { id: 'APPROVED', label: 'Approved' },
+    { id: 'REJECTED', label: 'Rejected' },
+    { id: 'SUSPENDED', label: 'Suspended' },
+    { id: 'ALL', label: 'All' },
+  ];
+  return (
+    <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+      <div className="relative flex-1">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          value={search}
+          onChange={(e) => onSearch(e.target.value)}
+          placeholder={placeholder}
+          className="pl-10"
+        />
+      </div>
+      <div className="flex gap-1 overflow-x-auto rounded-xl bg-muted p-1">
+        {filters.map((f) => (
+          <button
+            key={f.id}
+            type="button"
+            onClick={() => onFilter(f.id)}
+            className={cn(
+              'inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold cursor-pointer min-h-[36px] transition',
+              filter === f.id
+                ? 'bg-card text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground',
+            )}
+          >
+            {f.label}
+            <span
+              className={cn(
+                'rounded-md px-1.5 py-0.5 text-[10px] tabular-nums',
+                filter === f.id
+                  ? 'bg-muted text-foreground'
+                  : 'bg-background/60 text-muted-foreground',
+              )}
+            >
+              {counts[f.id]}
+            </span>
           </button>
         ))}
       </div>
+    </div>
+  );
+}
 
-      {tab === 'overview' && (
-        <>
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-            {[
-              ['Users', s.users],
-              ['Sellers', s.sellers],
-              ['Drivers', s.drivers],
-              ['Listings', s.listings],
-              ['Orders', s.orders],
-              ['Escrow held', formatTZS(s.escrowHeld)],
-              ['Disputes', s.openDisputes],
-            ].map(([label, val]) => (
-              <div
-                key={String(label)}
-                className="rounded-2xl border border-steel-200 bg-white p-4"
+function SellersPanel({
+  sellers,
+  onReview,
+}: {
+  sellers: SellerRow[];
+  onReview: (s: SellerRow) => void;
+}) {
+  const matchSearch = useMemo(
+    () => (s: SellerRow, q: string) => {
+      const hay = [
+        s.businessName,
+        s.legalFullName,
+        s.user.firstName,
+        s.user.lastName,
+        s.user.phone,
+        s.user.email,
+        s.nationalId,
+        s.city,
+        s.region,
+        s.businessType,
+        s.payoutPhone,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return hay.includes(q);
+    },
+    [],
+  );
+
+  const { filter, setFilter, search, setSearch, counts, filtered } =
+    useAppQueueFilter(sellers, matchSearch, 'PENDING');
+
+  const agingPending = useMemo(
+    () =>
+      sellers.filter(
+        (s) => s.status === 'PENDING' && applicationAgingDays(s.createdAt) >= 3,
+      ).length,
+    [sellers],
+  );
+
+  return (
+    <section className="space-y-5">
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+            KYC · marketplace
+          </p>
+          <h2 className="font-display text-xl font-extrabold text-foreground lg:text-2xl">
+            Seller applications
+          </h2>
+          <p className="mt-1 max-w-xl text-sm text-muted-foreground">
+            Verify business identity, shop photos, and payout details before
+            merchants can list parts.
+          </p>
+        </div>
+        <div className="rounded-xl border border-border bg-card px-3 py-2 text-right shadow-sm">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+            Total applications
+          </p>
+          <p className="font-display text-lg font-extrabold tabular-nums">
+            {sellers.length}
+          </p>
+          <p className="text-[11px] text-muted-foreground">
+            {counts.PENDING} awaiting review
+          </p>
+        </div>
+      </div>
+
+      <AppQueueKpis
+        counts={counts}
+        agingPending={agingPending}
+        kind="seller"
+      />
+
+      {agingPending > 0 && (
+        <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
+          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-signal" />
+          <div>
+            <p className="font-bold">
+              {agingPending} pending seller
+              {agingPending === 1 ? '' : 's'} waiting 3+ days
+            </p>
+            <p className="mt-0.5 text-amber-900/80 dark:text-amber-200/80">
+              Faster KYC review keeps inventory flowing onto the marketplace.
+            </p>
+          </div>
+        </div>
+      )}
+
+      <AppQueueToolbar
+        search={search}
+        onSearch={setSearch}
+        filter={filter}
+        onFilter={setFilter}
+        counts={counts}
+        placeholder="Search business, name, phone, ID, city…"
+      />
+
+      {/* Desktop */}
+      <div className="hidden overflow-hidden rounded-2xl border border-border bg-card shadow-sm lg:block">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[920px] text-left text-sm">
+            <thead className="border-b border-border bg-muted/70 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+              <tr>
+                <th className="px-4 py-3">Business</th>
+                <th className="px-4 py-3">Owner</th>
+                <th className="px-4 py-3">Location</th>
+                <th className="px-4 py-3">Documents</th>
+                <th className="px-4 py-3">Payout</th>
+                <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3">Applied</th>
+                <th className="px-4 py-3 text-right"> </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {filtered.map((s) => {
+                const docs = sellerDocUrls(s);
+                const present = countDocs(docs);
+                const owner =
+                  s.legalFullName ||
+                  `${s.user.firstName} ${s.user.lastName}`;
+                const days = applicationAgingDays(s.createdAt);
+                return (
+                  <tr
+                    key={s.id}
+                    className="group cursor-pointer transition-colors duration-150 hover:bg-muted/60"
+                    onClick={() => onReview(s)}
+                  >
+                    <td className="px-4 py-3.5">
+                      <div className="flex items-center gap-3">
+                        <UserAvatar name={s.businessName} size="sm" />
+                        <div className="min-w-0">
+                          <p className="truncate font-semibold text-foreground">
+                            {s.businessName}
+                          </p>
+                          <p className="text-[11px] capitalize text-muted-foreground">
+                            {(s.businessType || 'individual').replace(
+                              /_/g,
+                              ' ',
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <p className="font-medium text-foreground">{owner}</p>
+                      <p className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                        <Phone className="h-3 w-3" />
+                        {s.user.phone || '—'}
+                      </p>
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <p className="inline-flex items-center gap-1 text-foreground/90">
+                        <MapPin className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                        {s.city}
+                        {s.region ? `, ${s.region}` : ''}
+                      </p>
+                      {s.addressWard && (
+                        <p className="mt-0.5 text-[11px] text-muted-foreground">
+                          {s.addressWard}
+                        </p>
+                      )}
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <DocCompleteness present={present} total={docs.length} />
+                    </td>
+                    <td className="px-4 py-3.5 text-xs text-muted-foreground">
+                      <p className="font-semibold text-foreground/90">
+                        {s.payoutMethod || '—'}
+                      </p>
+                      <p className="truncate max-w-[9rem]">
+                        {s.payoutPhone || s.payoutAccountName || '—'}
+                      </p>
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <ApplicationStatusPill status={s.status} />
+                    </td>
+                    <td className="px-4 py-3.5 text-xs text-muted-foreground">
+                      <p>{s.createdAt ? formatRelative(s.createdAt) : '—'}</p>
+                      {s.status === 'PENDING' && days >= 3 && (
+                        <p className="mt-0.5 font-semibold text-amber-700 dark:text-amber-300">
+                          {days}d waiting
+                        </p>
+                      )}
+                    </td>
+                    <td className="px-4 py-3.5 text-right">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onReview(s);
+                        }}
+                      >
+                        Review
+                        <ChevronRight className="h-3.5 w-3.5" />
+                      </Button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        {!filtered.length && (
+          <div className="py-16 text-center">
+            <Store className="mx-auto h-10 w-10 text-muted-foreground/50" />
+            <p className="mt-3 font-semibold text-foreground">
+              No matching sellers
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {sellers.length
+                ? 'Try another filter or clear search.'
+                : 'Seller applications will appear here after onboarding.'}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Mobile */}
+      <ul className="space-y-3 lg:hidden">
+        {filtered.map((s) => {
+          const docs = sellerDocUrls(s);
+          const present = countDocs(docs);
+          const owner =
+            s.legalFullName || `${s.user.firstName} ${s.user.lastName}`;
+          return (
+            <li key={s.id}>
+              <button
+                type="button"
+                onClick={() => onReview(s)}
+                className="w-full rounded-2xl border border-border bg-card p-4 text-left shadow-sm transition-all duration-200 hover:border-bolt-300 hover:shadow-md active:scale-[0.99] cursor-pointer"
               >
-                <p className="text-xs font-semibold uppercase text-steel-400">
-                  {label}
+                <div className="flex items-start gap-3">
+                  <UserAvatar name={s.businessName} />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate font-bold text-foreground">
+                          {s.businessName}
+                        </p>
+                        <p className="text-xs text-muted-foreground">{owner}</p>
+                      </div>
+                      <ApplicationStatusPill status={s.status} />
+                    </div>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      {s.user.phone || '—'} · {s.city}
+                      {s.region ? `, ${s.region}` : ''}
+                    </p>
+                    <div className="mt-3">
+                      <DocCompleteness present={present} total={docs.length} />
+                    </div>
+                    <p className="mt-3 inline-flex items-center gap-0.5 text-xs font-semibold text-bolt-700 dark:text-bolt-300">
+                      Review application <ChevronRight className="h-3.5 w-3.5" />
+                    </p>
+                  </div>
+                </div>
+              </button>
+            </li>
+          );
+        })}
+        {!filtered.length && (
+          <Empty
+            title="No matching sellers"
+            body={
+              sellers.length
+                ? 'Try another filter or clear search.'
+                : 'Seller applications will appear here after onboarding.'
+            }
+          />
+        )}
+      </ul>
+    </section>
+  );
+}
+
+function DriversPanel({
+  drivers,
+  onReview,
+}: {
+  drivers: DriverRow[];
+  onReview: (d: DriverRow) => void;
+}) {
+  const matchSearch = useMemo(
+    () => (d: DriverRow, q: string) => {
+      const hay = [
+        d.legalFullName,
+        d.user.firstName,
+        d.user.lastName,
+        d.user.phone,
+        d.user.email,
+        d.vehiclePlate,
+        d.vehicleType,
+        d.vehicleMake,
+        d.licenseNumber,
+        d.nationalId,
+        d.city,
+        d.payoutPhone,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return hay.includes(q);
+    },
+    [],
+  );
+
+  const { filter, setFilter, search, setSearch, counts, filtered } =
+    useAppQueueFilter(drivers, matchSearch, 'PENDING');
+
+  const agingPending = useMemo(
+    () =>
+      drivers.filter(
+        (d) => d.status === 'PENDING' && applicationAgingDays(d.createdAt) >= 3,
+      ).length,
+    [drivers],
+  );
+
+  return (
+    <section className="space-y-5">
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+            KYC · logistics
+          </p>
+          <h2 className="font-display text-xl font-extrabold text-foreground lg:text-2xl">
+            Driver applications
+          </h2>
+          <p className="mt-1 max-w-xl text-sm text-muted-foreground">
+            Confirm identity, vehicle fitness, and licence before drivers can
+            accept delivery jobs.
+          </p>
+        </div>
+        <div className="rounded-xl border border-border bg-card px-3 py-2 text-right shadow-sm">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+            Total applications
+          </p>
+          <p className="font-display text-lg font-extrabold tabular-nums">
+            {drivers.length}
+          </p>
+          <p className="text-[11px] text-muted-foreground">
+            {counts.PENDING} awaiting review
+          </p>
+        </div>
+      </div>
+
+      <AppQueueKpis
+        counts={counts}
+        agingPending={agingPending}
+        kind="driver"
+      />
+
+      {agingPending > 0 && (
+        <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
+          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-signal" />
+          <div>
+            <p className="font-bold">
+              {agingPending} pending driver
+              {agingPending === 1 ? '' : 's'} waiting 3+ days
+            </p>
+            <p className="mt-0.5 text-amber-900/80 dark:text-amber-200/80">
+              Approving qualified drivers shortens delivery ETAs for buyers.
+            </p>
+          </div>
+        </div>
+      )}
+
+      <AppQueueToolbar
+        search={search}
+        onSearch={setSearch}
+        filter={filter}
+        onFilter={setFilter}
+        counts={counts}
+        placeholder="Search name, phone, plate, licence, ID…"
+      />
+
+      {/* Desktop */}
+      <div className="hidden overflow-hidden rounded-2xl border border-border bg-card shadow-sm lg:block">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[920px] text-left text-sm">
+            <thead className="border-b border-border bg-muted/70 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+              <tr>
+                <th className="px-4 py-3">Driver</th>
+                <th className="px-4 py-3">Vehicle</th>
+                <th className="px-4 py-3">Licence</th>
+                <th className="px-4 py-3">Location</th>
+                <th className="px-4 py-3">Documents</th>
+                <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3">Applied</th>
+                <th className="px-4 py-3 text-right"> </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {filtered.map((d) => {
+                const docs = driverDocUrls(d);
+                const present = countDocs(docs);
+                const name =
+                  d.legalFullName ||
+                  `${d.user.firstName} ${d.user.lastName}`;
+                const days = applicationAgingDays(d.createdAt);
+                return (
+                  <tr
+                    key={d.id}
+                    className="group cursor-pointer transition-colors duration-150 hover:bg-muted/60"
+                    onClick={() => onReview(d)}
+                  >
+                    <td className="px-4 py-3.5">
+                      <div className="flex items-center gap-3">
+                        <UserAvatar name={name} size="sm" />
+                        <div className="min-w-0">
+                          <p className="truncate font-semibold text-foreground">
+                            {name}
+                          </p>
+                          <p className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                            <Phone className="h-3 w-3" />
+                            {d.user.phone || '—'}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <p className="inline-flex items-center gap-1.5 font-semibold text-foreground">
+                        <Car className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="font-mono text-xs tracking-wide">
+                          {d.vehiclePlate}
+                        </span>
+                      </p>
+                      <p className="mt-0.5 text-[11px] capitalize text-muted-foreground">
+                        {d.vehicleType}
+                        {d.vehicleMake ? ` · ${d.vehicleMake}` : ''}
+                      </p>
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <p className="font-mono text-xs font-semibold text-foreground">
+                        {d.licenseNumber || '—'}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {d.nationalId ? `NIDA ${d.nationalId}` : 'No NIDA'}
+                      </p>
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <p className="inline-flex items-center gap-1 text-foreground/90">
+                        <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+                        {d.city}
+                      </p>
+                      {d.addressStreet && (
+                        <p className="mt-0.5 truncate max-w-[10rem] text-[11px] text-muted-foreground">
+                          {d.addressStreet}
+                        </p>
+                      )}
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <DocCompleteness present={present} total={docs.length} />
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <ApplicationStatusPill status={d.status} />
+                    </td>
+                    <td className="px-4 py-3.5 text-xs text-muted-foreground">
+                      <p>{d.createdAt ? formatRelative(d.createdAt) : '—'}</p>
+                      {d.status === 'PENDING' && days >= 3 && (
+                        <p className="mt-0.5 font-semibold text-amber-700 dark:text-amber-300">
+                          {days}d waiting
+                        </p>
+                      )}
+                    </td>
+                    <td className="px-4 py-3.5 text-right">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onReview(d);
+                        }}
+                      >
+                        Review
+                        <ChevronRight className="h-3.5 w-3.5" />
+                      </Button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        {!filtered.length && (
+          <div className="py-16 text-center">
+            <Truck className="mx-auto h-10 w-10 text-muted-foreground/50" />
+            <p className="mt-3 font-semibold text-foreground">
+              No matching drivers
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {drivers.length
+                ? 'Try another filter or clear search.'
+                : 'Driver applications will appear here after onboarding.'}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Mobile */}
+      <ul className="space-y-3 lg:hidden">
+        {filtered.map((d) => {
+          const docs = driverDocUrls(d);
+          const present = countDocs(docs);
+          const name =
+            d.legalFullName || `${d.user.firstName} ${d.user.lastName}`;
+          return (
+            <li key={d.id}>
+              <button
+                type="button"
+                onClick={() => onReview(d)}
+                className="w-full rounded-2xl border border-border bg-card p-4 text-left shadow-sm transition-all duration-200 hover:border-bolt-300 hover:shadow-md active:scale-[0.99] cursor-pointer"
+              >
+                <div className="flex items-start gap-3">
+                  <UserAvatar name={name} />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate font-bold text-foreground">
+                          {name}
+                        </p>
+                        <p className="font-mono text-xs text-muted-foreground">
+                          {d.vehiclePlate} · {d.vehicleType}
+                        </p>
+                      </div>
+                      <ApplicationStatusPill status={d.status} />
+                    </div>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      {d.user.phone || '—'} · {d.city}
+                    </p>
+                    <div className="mt-3">
+                      <DocCompleteness present={present} total={docs.length} />
+                    </div>
+                    <p className="mt-3 inline-flex items-center gap-0.5 text-xs font-semibold text-bolt-700 dark:text-bolt-300">
+                      Review application <ChevronRight className="h-3.5 w-3.5" />
+                    </p>
+                  </div>
+                </div>
+              </button>
+            </li>
+          );
+        })}
+        {!filtered.length && (
+          <Empty
+            title="No matching drivers"
+            body={
+              drivers.length
+                ? 'Try another filter or clear search.'
+                : 'Driver applications will appear here after onboarding.'
+            }
+          />
+        )}
+      </ul>
+    </section>
+  );
+}
+
+function ReviewDrawer({
+  review,
+  loading,
+  onClose,
+  onApprove,
+  onReject,
+  onSuspend,
+}: {
+  review: { type: 'seller'; data: SellerRow } | { type: 'driver'; data: DriverRow };
+  loading: boolean;
+  onClose: () => void;
+  onApprove: () => void;
+  onReject: () => void;
+  onSuspend: () => void;
+}) {
+  const d = review.data;
+  const isSeller = review.type === 'seller';
+  const seller = isSeller ? (d as SellerRow) : null;
+  const driver = !isSeller ? (d as DriverRow) : null;
+
+  const name = isSeller
+    ? seller!.businessName
+    : driver!.legalFullName ||
+      `${d.user.firstName} ${d.user.lastName}`;
+
+  const legalName =
+    (isSeller ? seller!.legalFullName : driver!.legalFullName) ||
+    `${d.user.firstName} ${d.user.lastName}`;
+
+  const photos = isSeller ? sellerDocUrls(seller!) : driverDocUrls(driver!);
+  const present = countDocs(photos);
+  const days = applicationAgingDays(d.createdAt);
+
+  const location = isSeller
+    ? [seller!.addressStreet, seller!.addressWard, d.city, seller!.region]
+        .filter(Boolean)
+        .join(', ') || d.city
+    : [driver!.addressStreet, d.city].filter(Boolean).join(', ') || d.city;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[60] flex justify-end">
+      <button
+        type="button"
+        className="absolute inset-0 bg-black/40 cursor-pointer admin-backdrop-in"
+        aria-label="Close"
+        onClick={onClose}
+      />
+      <div className="relative z-10 flex h-full w-full max-w-lg flex-col bg-card shadow-2xl admin-drawer-in">
+        {/* Header */}
+        <div className="shrink-0 border-b border-border px-5 py-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex min-w-0 items-start gap-3">
+              <UserAvatar name={name} size="lg" />
+              <div className="min-w-0">
+                <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                  {isSeller ? 'Seller application' : 'Driver application'}
                 </p>
-                <p className="font-display text-xl font-bold text-bolt-800">
-                  {val}
-                </p>
+                <h2 className="truncate font-display text-xl font-extrabold text-foreground">
+                  {name}
+                </h2>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <ApplicationStatusPill status={d.status} />
+                  {d.status === 'PENDING' && days > 0 && (
+                    <span className="inline-flex items-center gap-1 rounded-lg bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
+                      <Clock className="h-3 w-3" />
+                      {days}d in queue
+                    </span>
+                  )}
+                </div>
               </div>
-            ))}
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-muted-foreground hover:bg-muted cursor-pointer"
+              aria-label="Close"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+
+        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-5">
+          {/* Completeness strip */}
+          <div className="rounded-2xl border border-border bg-muted/40 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-card text-bolt-700 dark:text-bolt-300 shadow-sm">
+                  <FileCheck className="h-4 w-4" />
+                </span>
+                <div>
+                  <p className="text-sm font-bold text-foreground">
+                    Document pack
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {present === photos.length
+                      ? 'All required uploads present'
+                      : `${photos.length - present} missing — review carefully`}
+                  </p>
+                </div>
+              </div>
+              <DocCompleteness present={present} total={photos.length} />
+            </div>
           </div>
 
-          <div className="rounded-2xl border border-steel-200 bg-white p-4">
-            <h2 className="mb-3 font-display font-bold">Recent orders</h2>
-            <ul className="space-y-2 text-sm">
-              {dash.recentOrders.map((o) => (
-                <li
-                  key={o.id}
-                  className="flex items-center justify-between border-b border-steel-50 py-2 last:border-0"
+          {/* Identity */}
+          <section>
+            <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+              <IdCard className="h-3.5 w-3.5" />
+              Identity
+            </p>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <Info label="Legal name" value={legalName} />
+              <Info label="National ID" value={d.nationalId || '—'} />
+              <Info label="Phone" value={d.user.phone || '—'} />
+              <Info label="Email" value={d.user.email || '—'} />
+            </div>
+          </section>
+
+          {/* Business / Vehicle */}
+          {isSeller ? (
+            <section>
+              <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                <Building2 className="h-3.5 w-3.5" />
+                Business
+              </p>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <Info label="Business name" value={seller!.businessName} />
+                <Info
+                  label="Type"
+                  value={(seller!.businessType || 'individual').replace(
+                    /_/g,
+                    ' ',
+                  )}
+                />
+                <Info label="Location" value={location} />
+                <Info
+                  label="Applied"
+                  value={
+                    d.createdAt
+                      ? `${formatRelative(d.createdAt)} · ${formatDateTime(d.createdAt)}`
+                      : '—'
+                  }
+                />
+              </div>
+            </section>
+          ) : (
+            <section>
+              <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                <Car className="h-3.5 w-3.5" />
+                Vehicle & licence
+              </p>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <Info label="Plate" value={driver!.vehiclePlate} />
+                <Info
+                  label="Type"
+                  value={`${driver!.vehicleType}${driver!.vehicleMake ? ` · ${driver!.vehicleMake}` : ''}`}
+                />
+                <Info label="Licence no." value={driver!.licenseNumber || '—'} />
+                <Info label="Location" value={location} />
+                <Info
+                  label="Applied"
+                  value={
+                    d.createdAt
+                      ? `${formatRelative(d.createdAt)} · ${formatDateTime(d.createdAt)}`
+                      : '—'
+                  }
+                />
+              </div>
+            </section>
+          )}
+
+          {/* Payout */}
+          <section>
+            <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+              <Banknote className="h-3.5 w-3.5" />
+              Payout
+            </p>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {isSeller && (
+                <Info label="Method" value={seller!.payoutMethod || '—'} />
+              )}
+              <Info label="Account name" value={d.payoutAccountName || '—'} />
+              <Info label="Payout phone" value={d.payoutPhone || '—'} />
+            </div>
+          </section>
+
+          {d.rejectionReason && (
+            <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-900 dark:border-red-800 dark:bg-red-950/40 dark:text-red-100">
+              <p className="font-bold">Rejection reason</p>
+              <p className="mt-1 whitespace-pre-wrap">{d.rejectionReason}</p>
+            </div>
+          )}
+
+          {/* Documents gallery */}
+          <section>
+            <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+              <FileCheck className="h-3.5 w-3.5" />
+              Documents ({present}/{photos.length})
+            </p>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {photos.map((p) =>
+                p.url ? (
+                  <a
+                    key={p.label}
+                    href={p.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="group overflow-hidden rounded-xl border border-border bg-muted"
+                  >
+                    <div className="aspect-square">
+                      <SafeImage
+                        src={p.url}
+                        alt={p.label}
+                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      />
+                    </div>
+                    <p className="truncate px-2 py-1.5 text-[11px] font-semibold text-muted-foreground">
+                      {p.label}
+                    </p>
+                  </a>
+                ) : (
+                  <div
+                    key={p.label}
+                    className="flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-border bg-muted/40 p-2 text-center"
+                  >
+                    <AlertTriangle className="h-4 w-4 text-amber-signal" />
+                    <p className="text-[11px] font-semibold text-muted-foreground">
+                      {p.label}
+                    </p>
+                    <p className="text-[10px] text-amber-700 dark:text-amber-300">
+                      Missing
+                    </p>
+                  </div>
+                ),
+              )}
+            </div>
+          </section>
+        </div>
+
+        {/* Actions */}
+        <div className="shrink-0 space-y-2 border-t border-border bg-card px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          {d.status === 'PENDING' && (
+            <>
+              {present < photos.length && (
+                <p className="text-center text-[11px] text-amber-700 dark:text-amber-300">
+                  Incomplete documents — only approve if you verified offline.
+                </p>
+              )}
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Button className="flex-1" loading={loading} onClick={onApprove}>
+                  <BadgeCheck className="h-4 w-4" />
+                  Approve
+                </Button>
+                <Button
+                  variant="secondary"
+                  className="flex-1"
+                  onClick={onReject}
+                  disabled={loading}
                 >
-                  <span>
-                    {o.orderNumber} · {o.customer.firstName}{' '}
-                    {o.customer.lastName}
+                  <UserX className="h-4 w-4" />
+                  Reject
+                </Button>
+              </div>
+            </>
+          )}
+          {d.status === 'APPROVED' && (
+            <Button
+              variant="secondary"
+              className="w-full"
+              loading={loading}
+              onClick={onSuspend}
+            >
+              <Shield className="h-4 w-4" />
+              Suspend account
+            </Button>
+          )}
+          {(d.status === 'REJECTED' || d.status === 'SUSPENDED') && (
+            <Button className="w-full" loading={loading} onClick={onApprove}>
+              <BadgeCheck className="h-4 w-4" />
+              Re-approve
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+function Info({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl bg-muted px-3 py-2">
+      <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+        {label}
+      </p>
+      <p className="mt-0.5 text-sm font-semibold text-foreground break-words">
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function Empty({ title, body }: { title: string; body: string }) {
+  return (
+    <div className="rounded-2xl border border-dashed border-border bg-card py-14 text-center">
+      <p className="font-semibold text-foreground/90">{title}</p>
+      <p className="mt-1 text-sm text-muted-foreground">{body}</p>
+    </div>
+  );
+}
+
+function UserPopupMenu({
+  className,
+  onClose,
+  onLogout,
+}: {
+  className?: string;
+  onClose: () => void;
+  onLogout: () => void;
+}) {
+  const itemCls =
+    'flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-semibold text-popover-foreground transition hover:bg-muted cursor-pointer min-h-[44px]';
+
+  return (
+    <div
+      role="menu"
+      className={cn(
+        'overflow-hidden rounded-xl border border-border bg-popover py-1.5 shadow-xl text-popover-foreground admin-menu-in origin-top',
+        className,
+      )}
+    >
+      <Link
+        to="/account"
+        role="menuitem"
+        className={itemCls}
+        onClick={onClose}
+      >
+        <User className="h-4 w-4 text-muted-foreground" />
+        Profile
+      </Link>
+      <Link
+        to="/account"
+        role="menuitem"
+        className={itemCls}
+        onClick={onClose}
+      >
+        <Settings className="h-4 w-4 text-muted-foreground" />
+        Settings
+      </Link>
+      <Link
+        to="/"
+        target="_blank"
+        rel="noopener noreferrer"
+        role="menuitem"
+        className={itemCls}
+        onClick={onClose}
+      >
+        <ExternalLink className="h-4 w-4 text-muted-foreground" />
+        Visit store
+      </Link>
+      <div className="my-1 border-t border-border" />
+      <button
+        type="button"
+        role="menuitem"
+        className={cn(itemCls, 'text-danger hover:bg-red-50 dark:hover:bg-red-950/40')}
+        onClick={() => {
+          onClose();
+          onLogout();
+        }}
+      >
+        <LogOut className="h-4 w-4" />
+        Log out
+      </button>
+    </div>
+  );
+}
+
+// ─── Escrow ledger (professional) ────────────────────────────────────────────
+
+type EscrowFilter = 'ALL' | 'HELD' | 'RELEASED_TO_SELLER' | 'REFUNDED_TO_CUSTOMER' | 'PARTIAL_REFUND';
+
+function num(v: string | number | undefined | null) {
+  if (v == null || v === '') return 0;
+  const n = typeof v === 'string' ? Number(v) : v;
+  return Number.isFinite(n) ? n : 0;
+}
+
+function escrowAgingDays(heldAt?: string) {
+  if (!heldAt) return 0;
+  return Math.max(0, Math.floor((Date.now() - new Date(heldAt).getTime()) / 86_400_000));
+}
+
+function formatDateTime(iso?: string | null) {
+  if (!iso) return '—';
+  try {
+    return new Intl.DateTimeFormat('en-TZ', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(new Date(iso));
+  } catch {
+    return iso;
+  }
+}
+
+function escrowStatusLabel(status: string) {
+  switch (status) {
+    case 'HELD':
+      return 'Held';
+    case 'RELEASED_TO_SELLER':
+      return 'Released';
+    case 'REFUNDED_TO_CUSTOMER':
+      return 'Refunded';
+    case 'PARTIAL_REFUND':
+      return 'Partial refund';
+    default:
+      return status.replace(/_/g, ' ');
+  }
+}
+
+function EscrowStatusPill({ status }: { status: string }) {
+  const styles: Record<string, string> = {
+    HELD: 'bg-amber-100 text-amber-900 ring-amber-200 dark:bg-amber-950/50 dark:text-amber-200 dark:ring-amber-800',
+    RELEASED_TO_SELLER:
+      'bg-emerald-100 text-emerald-900 ring-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-200 dark:ring-emerald-800',
+    REFUNDED_TO_CUSTOMER:
+      'bg-sky-100 text-sky-900 ring-sky-200 dark:bg-sky-950/50 dark:text-sky-200 dark:ring-sky-800',
+    PARTIAL_REFUND:
+      'bg-violet-100 text-violet-900 ring-violet-200 dark:bg-violet-950/50 dark:text-violet-200 dark:ring-violet-800',
+  };
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold ring-1 ring-inset',
+        styles[status] || 'bg-muted text-muted-foreground ring-border',
+      )}
+    >
+      <span
+        className={cn(
+          'h-1.5 w-1.5 rounded-full',
+          status === 'HELD' && 'bg-amber-500',
+          status === 'RELEASED_TO_SELLER' && 'bg-emerald-500',
+          status === 'REFUNDED_TO_CUSTOMER' && 'bg-sky-500',
+          status === 'PARTIAL_REFUND' && 'bg-violet-500',
+          !['HELD', 'RELEASED_TO_SELLER', 'REFUNDED_TO_CUSTOMER', 'PARTIAL_REFUND'].includes(
+            status,
+          ) && 'bg-muted-foreground',
+        )}
+      />
+      {escrowStatusLabel(status)}
+    </span>
+  );
+}
+
+function AgingBadge({ days, status }: { days: number; status: string }) {
+  if (status !== 'HELD') {
+    return (
+      <span className="text-xs text-muted-foreground">
+        {days === 0 ? 'Same day' : `${days}d total`}
+      </span>
+    );
+  }
+  const tone =
+    days >= 7
+      ? 'text-danger bg-red-50 dark:bg-red-950/40'
+      : days >= 3
+        ? 'text-amber-800 bg-amber-50 dark:text-amber-200 dark:bg-amber-950/40'
+        : 'text-muted-foreground bg-muted';
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-xs font-semibold tabular-nums',
+        tone,
+      )}
+    >
+      <Clock className="h-3 w-3" />
+      {days === 0 ? 'Today' : `${days}d`}
+      {days >= 7 ? ' · aging' : ''}
+    </span>
+  );
+}
+
+function FeeSplitBar({
+  amount,
+  platformFee,
+  sellerAmount,
+}: {
+  amount: number;
+  platformFee: number;
+  sellerAmount: number;
+}) {
+  const total = amount || platformFee + sellerAmount || 1;
+  const feePct = Math.min(100, Math.round((platformFee / total) * 100));
+  const sellerPct = Math.max(0, 100 - feePct);
+  return (
+    <div className="space-y-1.5">
+      <div className="flex h-2 overflow-hidden rounded-full bg-muted">
+        <div
+          className="bg-bolt-600 transition-all"
+          style={{ width: `${sellerPct}%` }}
+          title="Seller"
+        />
+        <div
+          className="bg-amber-signal transition-all"
+          style={{ width: `${feePct}%` }}
+          title="Platform fee"
+        />
+      </div>
+      <div className="flex justify-between gap-2 text-[10px] font-semibold text-muted-foreground">
+        <span className="inline-flex items-center gap-1">
+          <span className="h-1.5 w-1.5 rounded-full bg-bolt-600" />
+          Seller {formatTZS(sellerAmount)}
+        </span>
+        <span className="inline-flex items-center gap-1">
+          <span className="h-1.5 w-1.5 rounded-full bg-amber-signal" />
+          Fee {formatTZS(platformFee)}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function EscrowPanel({ escrows }: { escrows: EscrowRow[] }) {
+  const [filter, setFilter] = useState<EscrowFilter>('ALL');
+  const [search, setSearch] = useState('');
+  const [selected, setSelected] = useState<EscrowRow | null>(null);
+
+  const summary = useMemo(() => {
+    let held = 0;
+    let heldCount = 0;
+    let released = 0;
+    let releasedCount = 0;
+    let refunded = 0;
+    let refundedCount = 0;
+    let fees = 0;
+    let agingCount = 0;
+    for (const e of escrows) {
+      const amt = num(e.amount);
+      const fee = num(e.platformFee);
+      fees += fee;
+      if (e.status === 'HELD') {
+        held += amt;
+        heldCount += 1;
+        if (escrowAgingDays(e.heldAt) >= 7) agingCount += 1;
+      } else if (e.status === 'RELEASED_TO_SELLER') {
+        released += amt;
+        releasedCount += 1;
+      } else if (
+        e.status === 'REFUNDED_TO_CUSTOMER' ||
+        e.status === 'PARTIAL_REFUND'
+      ) {
+        refunded += amt;
+        refundedCount += 1;
+      }
+    }
+    return {
+      held,
+      heldCount,
+      released,
+      releasedCount,
+      refunded,
+      refundedCount,
+      fees,
+      agingCount,
+      volume: held + released + refunded,
+    };
+  }, [escrows]);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return escrows.filter((e) => {
+      if (filter !== 'ALL' && e.status !== filter) return false;
+      if (!q) return true;
+      const customer = e.order.customer
+        ? `${e.order.customer.firstName} ${e.order.customer.lastName} ${e.order.customer.phone ?? ''} ${e.order.customer.email ?? ''}`
+        : '';
+      const items = (e.order.items ?? []).map((i) => i.title).join(' ');
+      const hay = `${e.order.orderNumber} ${e.status} ${customer} ${items} ${e.order.status ?? ''}`.toLowerCase();
+      return hay.includes(q);
+    });
+  }, [escrows, filter, search]);
+
+  const filters: { id: EscrowFilter; label: string; count: number }[] = [
+    { id: 'ALL', label: 'All', count: escrows.length },
+    {
+      id: 'HELD',
+      label: 'Held',
+      count: escrows.filter((e) => e.status === 'HELD').length,
+    },
+    {
+      id: 'RELEASED_TO_SELLER',
+      label: 'Released',
+      count: escrows.filter((e) => e.status === 'RELEASED_TO_SELLER').length,
+    },
+    {
+      id: 'REFUNDED_TO_CUSTOMER',
+      label: 'Refunded',
+      count: escrows.filter((e) => e.status === 'REFUNDED_TO_CUSTOMER').length,
+    },
+    {
+      id: 'PARTIAL_REFUND',
+      label: 'Partial',
+      count: escrows.filter((e) => e.status === 'PARTIAL_REFUND').length,
+    },
+  ];
+
+  const kpis = [
+    {
+      label: 'Currently held',
+      value: formatTZS(summary.held),
+      sub: `${summary.heldCount} open escrow${summary.heldCount === 1 ? '' : 's'}`,
+      icon: Wallet,
+      tone: 'bg-amber-50 text-amber-800 dark:bg-amber-950/50 dark:text-amber-200',
+      accent: 'border-l-amber-signal',
+    },
+    {
+      label: 'Released to sellers',
+      value: formatTZS(summary.released),
+      sub: `${summary.releasedCount} settled`,
+      icon: ArrowUpRight,
+      tone: 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200',
+      accent: 'border-l-emerald-500',
+    },
+    {
+      label: 'Refunded to buyers',
+      value: formatTZS(summary.refunded),
+      sub: `${summary.refundedCount} refund${summary.refundedCount === 1 ? '' : 's'}`,
+      icon: ArrowDownLeft,
+      tone: 'bg-sky-50 text-sky-800 dark:bg-sky-950/50 dark:text-sky-200',
+      accent: 'border-l-sky-500',
+    },
+    {
+      label: 'Platform fees',
+      value: formatTZS(summary.fees),
+      sub:
+        summary.agingCount > 0
+          ? `${summary.agingCount} aging 7d+`
+          : 'Across ledger',
+      icon: Percent,
+      tone: 'bg-bolt-50 text-bolt-800 dark:bg-bolt-950/50 dark:text-bolt-200',
+      accent: 'border-l-bolt-600',
+    },
+  ];
+
+  return (
+    <section className="space-y-5">
+      {/* Header */}
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+            Trust & payments
+          </p>
+          <h2 className="font-display text-xl font-extrabold text-foreground lg:text-2xl">
+            Escrow ledger
+          </h2>
+          <p className="mt-1 max-w-xl text-sm text-muted-foreground">
+            Buyer payments stay locked until delivery is confirmed. Release to
+            sellers or refund buyers from dispute resolution.
+          </p>
+        </div>
+        <div className="rounded-xl border border-border bg-card px-3 py-2 text-right shadow-sm">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+            Ledger volume
+          </p>
+          <p className="font-display text-lg font-extrabold tabular-nums text-foreground">
+            {formatTZS(summary.volume)}
+          </p>
+          <p className="text-[11px] text-muted-foreground">
+            {escrows.length} record{escrows.length === 1 ? '' : 's'}
+          </p>
+        </div>
+      </div>
+
+      {/* KPIs */}
+      <div className="admin-stagger grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {kpis.map((k) => {
+          const Icon = k.icon;
+          return (
+            <div
+              key={k.label}
+              className={cn(
+                'rounded-2xl border border-border border-l-4 bg-card p-4 shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5',
+                k.accent,
+              )}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                  {k.label}
+                </p>
+                <span
+                  className={cn(
+                    'flex h-9 w-9 items-center justify-center rounded-xl',
+                    k.tone,
+                  )}
+                >
+                  <Icon className="h-4 w-4" />
+                </span>
+              </div>
+              <p className="mt-2 font-display text-2xl font-extrabold tabular-nums text-foreground">
+                {k.value}
+              </p>
+              <p className="mt-1 text-xs font-semibold text-muted-foreground">
+                {k.sub}
+              </p>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Aging alert */}
+      {summary.agingCount > 0 && (
+        <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
+          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-signal" />
+          <div>
+            <p className="font-bold">
+              {summary.agingCount} held escrow
+              {summary.agingCount === 1 ? '' : 's'} older than 7 days
+            </p>
+            <p className="mt-0.5 text-amber-900/80 dark:text-amber-200/80">
+              Review delivery status or open disputes — delayed releases hurt
+              seller cash flow and buyer trust.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Toolbar */}
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+        <div className="relative flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search order #, customer, phone, item…"
+            className="pl-10"
+          />
+        </div>
+        <div className="flex gap-1 overflow-x-auto rounded-xl bg-muted p-1">
+          {filters.map((f) => (
+            <button
+              key={f.id}
+              type="button"
+              onClick={() => setFilter(f.id)}
+              className={cn(
+                'inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-bold cursor-pointer min-h-[36px] transition',
+                filter === f.id
+                  ? 'bg-card text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              {f.label}
+              <span
+                className={cn(
+                  'rounded-md px-1.5 py-0.5 text-[10px] tabular-nums',
+                  filter === f.id
+                    ? 'bg-muted text-foreground'
+                    : 'bg-background/60 text-muted-foreground',
+                )}
+              >
+                {f.count}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Desktop table */}
+      <div className="hidden overflow-hidden rounded-2xl border border-border bg-card shadow-sm lg:block">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[880px] text-left text-sm">
+            <thead className="border-b border-border bg-muted/70 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+              <tr>
+                <th className="px-4 py-3">Order</th>
+                <th className="px-4 py-3">Customer</th>
+                <th className="px-4 py-3">Gross</th>
+                <th className="px-4 py-3 min-w-[160px]">Split</th>
+                <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3">Age</th>
+                <th className="px-4 py-3">Held</th>
+                <th className="px-4 py-3 text-right"> </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {filtered.map((e) => {
+                const days = escrowAgingDays(e.heldAt);
+                const customer = e.order.customer;
+                const itemCount = e.order.items?.length ?? 0;
+                return (
+                  <tr
+                    key={e.id}
+                    className="group cursor-pointer transition-colors duration-150 hover:bg-muted/60"
+                    onClick={() => setSelected(e)}
+                  >
+                    <td className="px-4 py-3.5">
+                      <p className="font-mono text-xs font-bold text-foreground">
+                        {e.order.orderNumber}
+                      </p>
+                      <p className="mt-0.5 text-[11px] text-muted-foreground">
+                        {e.order.status
+                          ? e.order.status.replace(/_/g, ' ')
+                          : '—'}
+                        {itemCount > 0 ? ` · ${itemCount} item${itemCount === 1 ? '' : 's'}` : ''}
+                      </p>
+                      {e.order.dispute && (
+                        <span className="mt-1 inline-flex items-center gap-1 rounded-md bg-red-50 px-1.5 py-0.5 text-[10px] font-bold text-red-700 dark:bg-red-950/40 dark:text-red-300">
+                          <Scale className="h-3 w-3" />
+                          Dispute
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3.5">
+                      {customer ? (
+                        <>
+                          <p className="font-semibold text-foreground">
+                            {customer.firstName} {customer.lastName}
+                          </p>
+                          <p className="text-[11px] text-muted-foreground">
+                            {customer.phone || customer.email || '—'}
+                          </p>
+                        </>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <p className="font-display text-base font-bold tabular-nums text-foreground">
+                        {formatTZS(e.amount)}
+                      </p>
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <FeeSplitBar
+                        amount={num(e.amount)}
+                        platformFee={num(e.platformFee)}
+                        sellerAmount={num(e.sellerAmount) || num(e.amount) - num(e.platformFee)}
+                      />
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <EscrowStatusPill status={e.status} />
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <AgingBadge days={days} status={e.status} />
+                    </td>
+                    <td className="px-4 py-3.5 text-xs text-muted-foreground">
+                      <p>{e.heldAt ? formatRelative(e.heldAt) : '—'}</p>
+                      <p className="mt-0.5 tabular-nums opacity-80">
+                        {formatDateTime(e.heldAt)}
+                      </p>
+                    </td>
+                    <td className="px-4 py-3.5 text-right">
+                      <button
+                        type="button"
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground cursor-pointer"
+                        aria-label="View escrow"
+                        onClick={(ev) => {
+                          ev.stopPropagation();
+                          setSelected(e);
+                        }}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        {!filtered.length && (
+          <div className="py-16 text-center">
+            <Banknote className="mx-auto h-10 w-10 text-muted-foreground/50" />
+            <p className="mt-3 font-semibold text-foreground">No matching escrows</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {escrows.length
+                ? 'Try another filter or clear search.'
+                : 'Escrow records appear when buyers complete payment.'}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Mobile cards */}
+      <ul className="space-y-3 lg:hidden">
+        {filtered.map((e) => {
+          const days = escrowAgingDays(e.heldAt);
+          const customer = e.order.customer;
+          return (
+            <li key={e.id}>
+              <button
+                type="button"
+                onClick={() => setSelected(e)}
+                className="w-full rounded-2xl border border-border bg-card p-4 text-left shadow-sm transition-all duration-200 hover:border-bolt-300 hover:shadow-md active:scale-[0.99] cursor-pointer"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="font-mono text-xs font-bold">
+                      {e.order.orderNumber}
+                    </p>
+                    <p className="mt-0.5 text-sm font-semibold text-foreground">
+                      {customer
+                        ? `${customer.firstName} ${customer.lastName}`
+                        : 'Customer'}
+                    </p>
+                  </div>
+                  <EscrowStatusPill status={e.status} />
+                </div>
+                <p className="mt-3 font-display text-xl font-extrabold tabular-nums">
+                  {formatTZS(e.amount)}
+                </p>
+                <div className="mt-2">
+                  <FeeSplitBar
+                    amount={num(e.amount)}
+                    platformFee={num(e.platformFee)}
+                    sellerAmount={
+                      num(e.sellerAmount) || num(e.amount) - num(e.platformFee)
+                    }
+                  />
+                </div>
+                <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
+                  <AgingBadge days={days} status={e.status} />
+                  <span className="inline-flex items-center gap-0.5 font-semibold text-bolt-700 dark:text-bolt-300">
+                    Details <ChevronRight className="h-3.5 w-3.5" />
                   </span>
-                  <span className="flex items-center gap-2">
-                    <Badge variant="muted">{o.status}</Badge>
-                    {formatTZS(o.total)}
-                  </span>
+                </div>
+              </button>
+            </li>
+          );
+        })}
+        {!filtered.length && (
+          <Empty
+            title="No matching escrows"
+            body={
+              escrows.length
+                ? 'Try another filter or clear search.'
+                : 'Escrow records appear when buyers complete payment.'
+            }
+          />
+        )}
+      </ul>
+
+      {selected && (
+        <EscrowDetailDrawer
+          escrow={selected}
+          onClose={() => setSelected(null)}
+        />
+      )}
+    </section>
+  );
+}
+
+function EscrowDetailDrawer({
+  escrow,
+  onClose,
+}: {
+  escrow: EscrowRow;
+  onClose: () => void;
+}) {
+  const amount = num(escrow.amount);
+  const fee = num(escrow.platformFee);
+  const seller = num(escrow.sellerAmount) || amount - fee;
+  const customer = escrow.order.customer;
+  const days = escrowAgingDays(escrow.heldAt);
+  const settledAt = escrow.releasedAt || escrow.refundedAt;
+
+  const timeline: { label: string; at?: string | null; done: boolean; tone?: string }[] = [
+    { label: 'Payment held in escrow', at: escrow.heldAt, done: true },
+    {
+      label:
+        escrow.status === 'REFUNDED_TO_CUSTOMER' ||
+        escrow.status === 'PARTIAL_REFUND'
+          ? 'Refunded to customer'
+          : escrow.status === 'RELEASED_TO_SELLER'
+            ? 'Released to seller'
+            : 'Awaiting settlement',
+      at: settledAt,
+      done: Boolean(settledAt),
+      tone:
+        escrow.status === 'REFUNDED_TO_CUSTOMER' ||
+        escrow.status === 'PARTIAL_REFUND'
+          ? 'sky'
+          : escrow.status === 'RELEASED_TO_SELLER'
+            ? 'emerald'
+            : 'amber',
+    },
+  ];
+
+  return createPortal(
+    <div className="fixed inset-0 z-[60] flex justify-end">
+      <button
+        type="button"
+        className="absolute inset-0 bg-black/40 cursor-pointer admin-backdrop-in"
+        aria-label="Close"
+        onClick={onClose}
+      />
+      <div className="relative z-10 flex h-full w-full max-w-lg flex-col bg-card shadow-2xl admin-drawer-in">
+        <div className="shrink-0 flex items-start justify-between gap-3 border-b border-border px-5 py-4">
+          <div className="min-w-0">
+            <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+              Escrow detail
+            </p>
+            <h2 className="truncate font-mono text-lg font-extrabold text-foreground">
+              {escrow.order.orderNumber}
+            </h2>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <EscrowStatusPill status={escrow.status} />
+              <AgingBadge days={days} status={escrow.status} />
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-muted-foreground hover:bg-muted cursor-pointer"
+            aria-label="Close"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-5">
+          {/* Amount hero */}
+          <div className="rounded-2xl border border-border bg-gradient-to-br from-bolt-800 to-steel-900 p-5 text-white shadow-md">
+            <p className="text-xs font-bold uppercase tracking-wider text-bolt-200">
+              Gross held
+            </p>
+            <p className="mt-1 font-display text-3xl font-extrabold tabular-nums">
+              {formatTZS(amount)}
+            </p>
+            <p className="mt-2 text-xs text-bolt-100/80">
+              Order total{' '}
+              {escrow.order.total != null
+                ? formatTZS(escrow.order.total)
+                : '—'}{' '}
+              · status{' '}
+              {(escrow.order.status || '—').replace(/_/g, ' ')}
+            </p>
+          </div>
+
+          {/* Split */}
+          <div className="rounded-2xl border border-border bg-card p-4">
+            <p className="mb-3 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+              Fund split
+            </p>
+            <FeeSplitBar
+              amount={amount}
+              platformFee={fee}
+              sellerAmount={seller}
+            />
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <Info label="Seller payout" value={formatTZS(seller)} />
+              <Info label="Platform fee" value={formatTZS(fee)} />
+            </div>
+          </div>
+
+          {/* Parties */}
+          <div className="rounded-2xl border border-border bg-card p-4">
+            <p className="mb-3 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+              Parties
+            </p>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-bold uppercase text-muted-foreground">
+                    Buyer
+                  </p>
+                  <p className="truncate font-semibold text-foreground">
+                    {customer
+                      ? `${customer.firstName} ${customer.lastName}`
+                      : '—'}
+                  </p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {customer?.phone || customer?.email || '—'}
+                  </p>
+                </div>
+              </div>
+              {escrow.order.dispute && (
+                <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-3 dark:border-red-800 dark:bg-red-950/40">
+                  <Scale className="mt-0.5 h-4 w-4 shrink-0 text-danger" />
+                  <div>
+                    <p className="text-xs font-bold text-red-900 dark:text-red-200">
+                      Open dispute · {escrow.order.dispute.status}
+                    </p>
+                    {escrow.order.dispute.reason && (
+                      <p className="mt-0.5 text-xs text-red-800/80 dark:text-red-200/80">
+                        {escrow.order.dispute.reason}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Line items */}
+          {(escrow.order.items?.length ?? 0) > 0 && (
+            <div className="rounded-2xl border border-border bg-card p-4">
+              <p className="mb-3 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                Order items
+              </p>
+              <ul className="divide-y divide-border">
+                {escrow.order.items!.map((item, i) => (
+                  <li
+                    key={`${item.title}-${i}`}
+                    className="flex items-start justify-between gap-3 py-2.5 first:pt-0 last:pb-0"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-foreground">
+                        {item.title}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Qty {item.quantity}
+                      </p>
+                    </div>
+                    <p className="shrink-0 text-sm font-bold tabular-nums">
+                      {formatTZS(item.lineTotal)}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Timeline */}
+          <div className="rounded-2xl border border-border bg-card p-4">
+            <p className="mb-3 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+              Timeline
+            </p>
+            <ol className="relative space-y-4 border-l border-border pl-4">
+              {timeline.map((step) => (
+                <li key={step.label} className="relative">
+                  <span
+                    className={cn(
+                      'absolute -left-[1.3rem] top-1 h-2.5 w-2.5 rounded-full ring-4 ring-card',
+                      step.done
+                        ? step.tone === 'sky'
+                          ? 'bg-sky-500'
+                          : step.tone === 'emerald'
+                            ? 'bg-emerald-500'
+                            : 'bg-bolt-600'
+                        : 'bg-amber-signal',
+                    )}
+                  />
+                  <p className="text-sm font-semibold text-foreground">
+                    {step.label}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {step.at ? formatDateTime(step.at) : 'Pending'}
+                  </p>
                 </li>
               ))}
-            </ul>
+            </ol>
           </div>
-        </>
-      )}
 
-      {tab === 'sellers' && (
-        <ul className="space-y-3">
-          {sellers.map((s) => (
-            <li
-              key={s.id}
-              className="rounded-2xl border border-steel-200 bg-white p-4"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div>
-                  <p className="font-display font-bold">{s.businessName}</p>
-                  <p className="text-xs text-steel-500">
-                    {s.legalFullName ||
-                      `${s.user.firstName} ${s.user.lastName}`}{' '}
-                    · {s.user.phone}
-                  </p>
-                  <p className="mt-1 text-sm text-steel-700">
-                    {s.businessType || 'individual'} · {s.city}
-                    {s.addressStreet ? ` · ${s.addressStreet}` : ''}
-                  </p>
-                  {s.nationalId && (
-                    <p className="text-xs text-steel-500">ID: {s.nationalId}</p>
-                  )}
-                  {s.payoutAccountName && (
-                    <p className="text-xs text-steel-500">
-                      Payout: {s.payoutAccountName}
-                    </p>
-                  )}
-                </div>
-                <Badge
-                  variant={
-                    s.status === 'APPROVED'
-                      ? 'success'
-                      : s.status === 'PENDING'
-                        ? 'warning'
-                        : 'danger'
-                  }
-                >
-                  {s.status}
-                </Badge>
-              </div>
-              {s.status === 'PENDING' && (
-                <div className="mt-3 flex gap-2">
-                  <Button
-                    size="sm"
-                    onClick={() => void setSellerStatus(s.id, 'APPROVED')}
-                  >
-                    Approve
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => void setSellerStatus(s.id, 'REJECTED')}
-                  >
-                    Reject
-                  </Button>
-                </div>
-              )}
-              {s.status === 'APPROVED' && (
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  className="mt-3"
-                  onClick={() => void setSellerStatus(s.id, 'SUSPENDED')}
-                >
-                  Suspend
-                </Button>
-              )}
-            </li>
-          ))}
-          {!sellers.length && (
-            <p className="py-8 text-center text-sm text-steel-500">
-              No seller applications
-            </p>
+          {escrow.notes && (
+            <div className="rounded-2xl border border-border bg-muted/50 p-4">
+              <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                Notes
+              </p>
+              <p className="mt-1 text-sm text-foreground whitespace-pre-wrap">
+                {escrow.notes}
+              </p>
+            </div>
           )}
-        </ul>
-      )}
 
-      {tab === 'drivers' && (
-        <ul className="space-y-3">
-          {drivers.map((d) => (
-            <li
-              key={d.id}
-              className="rounded-2xl border border-steel-200 bg-white p-4"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div>
-                  <p className="font-display font-bold">
-                    {d.legalFullName ||
-                      `${d.user.firstName} ${d.user.lastName}`}
-                  </p>
-                  <p className="text-xs text-steel-500">
-                    {d.user.phone} · {d.city}
-                  </p>
-                  <p className="mt-1 text-sm text-steel-700">
-                    {d.vehicleType} · {d.vehiclePlate} · licence{' '}
-                    {d.licenseNumber}
-                  </p>
-                  {d.nationalId && (
-                    <p className="text-xs text-steel-500">ID: {d.nationalId}</p>
-                  )}
-                  {d.payoutAccountName && (
-                    <p className="text-xs text-steel-500">
-                      Payout: {d.payoutAccountName}
-                    </p>
-                  )}
-                </div>
-                <Badge
-                  variant={
-                    d.status === 'APPROVED'
-                      ? 'success'
-                      : d.status === 'PENDING'
-                        ? 'warning'
-                        : 'danger'
-                  }
-                >
-                  {d.status}
-                </Badge>
-              </div>
-              {d.status === 'PENDING' && (
-                <div className="mt-3 flex gap-2">
-                  <Button
-                    size="sm"
-                    onClick={() => void setDriverStatus(d.id, 'APPROVED')}
-                  >
-                    Approve
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => void setDriverStatus(d.id, 'REJECTED')}
-                  >
-                    Reject
-                  </Button>
-                </div>
-              )}
-              {d.status === 'APPROVED' && (
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  className="mt-3"
-                  onClick={() => void setDriverStatus(d.id, 'SUSPENDED')}
-                >
-                  Suspend
-                </Button>
-              )}
-            </li>
-          ))}
-          {!drivers.length && (
-            <p className="py-8 text-center text-sm text-steel-500">
-              No driver applications
-            </p>
-          )}
-        </ul>
-      )}
+          <div className="grid grid-cols-2 gap-2">
+            <Info label="Held at" value={formatDateTime(escrow.heldAt)} />
+            <Info
+              label="Settled at"
+              value={formatDateTime(settledAt)}
+            />
+          </div>
+        </div>
 
-      {tab === 'disputes' && (
-        <ul className="space-y-3">
-          {disputes.map((d) => (
-            <li
-              key={d.id}
-              className="rounded-2xl border border-steel-200 bg-white p-4"
-            >
-              <div className="flex justify-between">
-                <p className="font-mono text-xs">{d.order.orderNumber}</p>
-                <Badge
-                  variant={d.status === 'OPEN' ? 'danger' : 'success'}
-                >
-                  {d.status}
-                </Badge>
-              </div>
-              <p className="mt-1 font-semibold">{d.reason}</p>
-              {d.status === 'OPEN' && (
-                <div className="mt-3 flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => void resolve(d.id, 'customer')}
-                  >
-                    Refund customer
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={() => void resolve(d.id, 'seller')}
-                  >
-                    Release to seller
-                  </Button>
-                </div>
-              )}
-            </li>
-          ))}
-          {!disputes.length && (
-            <p className="py-8 text-center text-sm text-steel-500">
-              No disputes
-            </p>
-          )}
-        </ul>
-      )}
-
-      {tab === 'escrows' && (
-        <ul className="space-y-2">
-          {escrows.map((e) => (
-            <li
-              key={e.id}
-              className="flex items-center justify-between rounded-2xl border border-steel-200 bg-white p-4 text-sm"
-            >
-              <span className="font-mono text-xs">{e.order.orderNumber}</span>
-              <span className="font-bold">{formatTZS(e.amount)}</span>
-              <Badge
-                variant={e.status === 'HELD' ? 'warning' : 'success'}
-              >
-                {e.status}
-              </Badge>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+        <div className="shrink-0 border-t border-border p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          <p className="mb-2 text-center text-[11px] text-muted-foreground">
+            Settlements run from Disputes when a case is open, or automatically
+            after confirmed delivery.
+          </p>
+          <Button variant="secondary" className="w-full" onClick={onClose}>
+            Close
+          </Button>
+        </div>
+      </div>
+    </div>,
+    document.body,
   );
 }

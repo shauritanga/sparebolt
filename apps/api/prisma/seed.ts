@@ -1,10 +1,75 @@
 import { PrismaClient, PartCondition, Role } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import * as fs from 'fs';
+import * as path from 'path';
 
 const prisma = new PrismaClient();
 
+/**
+ * Seed regions / districts / wards from Census 2022 JSON.
+ * District display names are pre-processed: first occurrence keeps base name;
+ * duplicates get second part (Town / District / Municipal / City).
+ */
+async function seedLocations() {
+  const filePath = path.join(__dirname, 'data', 'tanzania-locations.json');
+  if (!fs.existsSync(filePath)) {
+    console.warn('Location data file missing, skip locations seed:', filePath);
+    return;
+  }
+
+  const existing = await prisma.region.count();
+  if (existing > 0) {
+    console.log(`Locations already seeded (${existing} regions), skip.`);
+    return;
+  }
+
+  const data = JSON.parse(fs.readFileSync(filePath, 'utf8')) as Record<
+    string,
+    Record<string, string[]>
+  >;
+
+  let regionCount = 0;
+  let districtCount = 0;
+  let wardCount = 0;
+  let sortOrder = 0;
+
+  for (const [regionName, districts] of Object.entries(data)) {
+    const region = await prisma.region.create({
+      data: { name: regionName, sortOrder: sortOrder++ },
+    });
+    regionCount++;
+
+    for (const [districtName, wards] of Object.entries(districts)) {
+      const district = await prisma.district.create({
+        data: {
+          name: districtName,
+          regionId: region.id,
+        },
+      });
+      districtCount++;
+
+      if (wards?.length) {
+        // createMany for speed
+        await prisma.ward.createMany({
+          data: wards.map((w) => ({
+            name: w,
+            districtId: district.id,
+          })),
+          skipDuplicates: true,
+        });
+        wardCount += wards.length;
+      }
+    }
+  }
+
+  console.log(
+    `Locations seeded: ${regionCount} regions, ${districtCount} districts, ${wardCount} wards`,
+  );
+}
+
 async function main() {
   console.log('Seeding SpareBolt…');
+  await seedLocations();
 
   const passwordHash = await bcrypt.hash('password123', 10);
 
@@ -475,6 +540,9 @@ async function main() {
   console.log('  seller@sparebolt.tz');
   console.log('  driver@sparebolt.tz');
   console.log(`Admin id: ${admin.id}`);
+  console.log(
+    `Regions: ${await prisma.region.count()}, districts: ${await prisma.district.count()}, wards: ${await prisma.ward.count()}`,
+  );
 }
 
 main()

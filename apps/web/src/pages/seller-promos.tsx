@@ -97,10 +97,10 @@ export function SellerPromosPage() {
     <div className="mx-auto max-w-lg space-y-6">
       <div>
         <h1 className="flex items-center gap-2 font-display text-2xl font-extrabold">
-          <Megaphone className="h-7 w-7 text-bolt-700" />
+          <Megaphone className="h-7 w-7 text-bolt-700 dark:text-bolt-300" />
           Promote products
         </h1>
-        <p className="mt-1 text-sm text-steel-600">
+        <p className="mt-1 text-sm text-muted-foreground">
           Subscribe a listing to the homepage carousel (up to 3 featured ads
           rotate automatically for all buyers).
         </p>
@@ -115,32 +115,32 @@ export function SellerPromosPage() {
             onClick={() => setForm((f) => ({ ...f, package: p.package }))}
             className={`rounded-2xl border p-3 text-left cursor-pointer transition ${
               form.package === p.package
-                ? 'border-bolt-600 bg-bolt-50 ring-2 ring-bolt-600/30'
-                : 'border-steel-200 bg-white'
+                ? 'border-bolt-600 bg-bolt-50 dark:bg-bolt-950/50 ring-2 ring-bolt-600/30'
+                : 'border-border bg-card'
             }`}
           >
-            <p className="text-xs font-bold uppercase text-steel-500">
+            <p className="text-xs font-bold uppercase text-muted-foreground">
               {p.package}
             </p>
-            <p className="font-display text-lg font-bold text-bolt-800">
+            <p className="font-display text-lg font-bold text-bolt-800 dark:text-bolt-200">
               {formatTZS(p.price)}
             </p>
-            <p className="text-xs text-steel-600">{p.days} days</p>
+            <p className="text-xs text-muted-foreground">{p.days} days</p>
           </button>
         ))}
       </div>
 
       <form
         onSubmit={(e) => void subscribe(e)}
-        className="space-y-3 rounded-2xl border border-steel-200 bg-white p-4 shadow-sm"
+        className="space-y-3 rounded-2xl border border-border bg-card p-4 shadow-sm"
       >
         <h2 className="font-display font-bold">New homepage ad</h2>
         <div>
-          <label className="mb-1 block text-xs font-semibold text-steel-600">
+          <label className="mb-1 block text-xs font-semibold text-muted-foreground">
             Listing to promote
           </label>
           <select
-            className="h-12 w-full rounded-xl border border-steel-200 px-3 text-base"
+            className="h-12 w-full rounded-xl border border-border px-3 text-base"
             value={form.listingId}
             onChange={(e) =>
               setForm((f) => ({ ...f, listingId: e.target.value }))
@@ -155,9 +155,9 @@ export function SellerPromosPage() {
             ))}
           </select>
           {!listings.length && (
-            <p className="mt-1 text-xs text-steel-500">
+            <p className="mt-1 text-xs text-muted-foreground">
               No listings yet.{' '}
-              <Link to="/seller/listings/new" className="text-bolt-700 font-semibold">
+              <Link to="/seller/listings/new" className="text-bolt-700 dark:text-bolt-300 font-semibold">
                 Create one
               </Link>
             </p>
@@ -181,7 +181,7 @@ export function SellerPromosPage() {
         <Button type="submit" className="w-full" loading={loading}>
           Subscribe & go live
         </Button>
-        <p className="text-center text-[11px] text-steel-400">
+        <p className="text-center text-[11px] text-muted-foreground">
           MVP: payment is simulated — ads activate immediately
         </p>
       </form>
@@ -191,15 +191,15 @@ export function SellerPromosPage() {
         {promos.map((p) => (
           <div
             key={p.id}
-            className="rounded-2xl border border-steel-200 bg-white p-4"
+            className="rounded-2xl border border-border bg-card p-4"
           >
             <div className="flex items-start justify-between gap-2">
               <div>
                 <p className="font-semibold">{p.title}</p>
-                <p className="text-xs text-steel-500">
+                <p className="text-xs text-muted-foreground">
                   {p.package} · until {new Date(p.endsAt).toLocaleDateString()}
                 </p>
-                <p className="mt-1 text-xs text-steel-500">
+                <p className="mt-1 text-xs text-muted-foreground">
                   {p.impressions} views · {p.clicks} clicks ·{' '}
                   {formatTZS(p.pricePaid)}
                 </p>
@@ -229,7 +229,7 @@ export function SellerPromosPage() {
           </div>
         ))}
         {!promos.length && (
-          <p className="py-6 text-center text-sm text-steel-500">
+          <p className="py-6 text-center text-sm text-muted-foreground">
             No promos yet. Subscribe a product above.
           </p>
         )}

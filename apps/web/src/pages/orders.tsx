@@ -39,7 +39,7 @@ export function OrdersPage() {
     return (
       <div className="space-y-3">
         {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="h-24 animate-pulse rounded-2xl bg-steel-200/60" />
+          <div key={i} className="h-24 animate-pulse rounded-2xl bg-muted" />
         ))}
       </div>
     );
@@ -49,9 +49,9 @@ export function OrdersPage() {
     <div className="mx-auto max-w-lg space-y-4">
       <h1 className="font-display text-2xl font-extrabold">{t('orders')}</h1>
       {!orders.length && (
-        <p className="py-12 text-center text-sm text-steel-500">
+        <p className="py-12 text-center text-sm text-muted-foreground">
           No orders yet.{' '}
-          <Link to="/browse" className="font-semibold text-bolt-700">
+          <Link to="/browse" className="font-semibold text-bolt-700 dark:text-bolt-300">
             {t('browse')}
           </Link>
         </p>
@@ -61,17 +61,17 @@ export function OrdersPage() {
           <li key={o.id}>
             <Link
               to={`/orders/${o.id}`}
-              className="block rounded-2xl border border-steel-200 bg-white p-4 shadow-sm transition hover:border-bolt-300"
+              className="block rounded-2xl border border-border bg-card p-4 shadow-sm transition hover:border-bolt-300"
             >
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <p className="font-mono text-xs text-steel-400">
+                  <p className="font-mono text-xs text-muted-foreground">
                     {o.orderNumber}
                   </p>
-                  <p className="font-display font-bold text-steel-900">
+                  <p className="font-display font-bold text-foreground">
                     {formatTZS(o.total)}
                   </p>
-                  <p className="text-xs text-steel-500">
+                  <p className="text-xs text-muted-foreground">
                     {o.items?.length} item(s) · {formatRelative(o.createdAt)}
                   </p>
                 </div>
@@ -113,15 +113,15 @@ export function OrderDetailPage() {
   }, [id]);
 
   if (loading) {
-    return <div className="h-48 animate-pulse rounded-2xl bg-steel-200/60" />;
+    return <div className="h-48 animate-pulse rounded-2xl bg-muted" />;
   }
   if (!order) {
     return (
-      <p className="py-12 text-center text-steel-500">
+      <p className="py-12 text-center text-muted-foreground">
         Order not found{' '}
         <button
           type="button"
-          className="text-bolt-700 font-semibold cursor-pointer"
+          className="text-bolt-700 dark:text-bolt-300 font-semibold cursor-pointer"
           onClick={() => void navigate('/orders')}
         >
           Back
@@ -173,7 +173,7 @@ export function OrderDetailPage() {
     <div className="mx-auto max-w-lg space-y-4">
       <div className="flex items-start justify-between">
         <div>
-          <p className="font-mono text-xs text-steel-400">{order.orderNumber}</p>
+          <p className="font-mono text-xs text-muted-foreground">{order.orderNumber}</p>
           <h1 className="font-display text-2xl font-extrabold">
             {formatTZS(order.total)}
           </h1>
@@ -184,8 +184,8 @@ export function OrderDetailPage() {
       </div>
 
       {/* Timeline */}
-      <div className="rounded-2xl border border-steel-200 bg-white p-4">
-        <p className="mb-3 text-xs font-bold uppercase text-steel-400">
+      <div className="rounded-2xl border border-border bg-card p-4">
+        <p className="mb-3 text-xs font-bold uppercase text-muted-foreground">
           {t('orderStatus')}
         </p>
         <ol className="space-y-2">
@@ -195,14 +195,14 @@ export function OrderDetailPage() {
                 className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold ${
                   i <= stepIdx
                     ? 'bg-bolt-700 text-white'
-                    : 'bg-steel-100 text-steel-400'
+                    : 'bg-muted text-muted-foreground'
                 }`}
               >
                 {i + 1}
               </span>
               <span
                 className={
-                  i <= stepIdx ? 'font-semibold text-steel-900' : 'text-steel-400'
+                  i <= stepIdx ? 'font-semibold text-foreground' : 'text-muted-foreground'
                 }
               >
                 {s.replace(/_/g, ' ')}
@@ -213,13 +213,13 @@ export function OrderDetailPage() {
       </div>
 
       {order.escrow && (
-        <div className="rounded-2xl bg-bolt-50 p-4 text-sm text-bolt-900">
+        <div className="rounded-2xl bg-bolt-50 dark:bg-bolt-950/50 p-4 text-sm text-bolt-900 dark:text-bolt-100">
           Escrow: <strong>{order.escrow.status}</strong> ·{' '}
           {formatTZS(order.escrow.amount)}
         </div>
       )}
 
-      <ul className="space-y-2 rounded-2xl border border-steel-200 bg-white p-4">
+      <ul className="space-y-2 rounded-2xl border border-border bg-card p-4">
         {order.items.map((item) => (
           <li key={item.id} className="flex justify-between text-sm">
             <span>
@@ -237,12 +237,12 @@ export function OrderDetailPage() {
       )}
 
       {(order.status === 'CONFIRMED' || order.status === 'DELIVERED') && (
-        <div className="space-y-2 rounded-2xl border border-steel-200 bg-white p-4">
+        <div className="space-y-2 rounded-2xl border border-border bg-card p-4">
           <h3 className="font-display font-bold">Rate your experience</h3>
           <select
             value={rating}
             onChange={(e) => setRating(Number(e.target.value))}
-            className="h-12 w-full rounded-xl border border-steel-200 px-3"
+            className="h-12 w-full rounded-xl border border-border px-3"
           >
             {[5, 4, 3, 2, 1].map((n) => (
               <option key={n} value={n}>

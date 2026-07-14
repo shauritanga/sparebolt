@@ -19,8 +19,8 @@ export function CartPage() {
   if (!items.length) {
     return (
       <div className="flex flex-col items-center py-20 text-center">
-        <ShoppingBag className="mb-4 h-14 w-14 text-steel-300" />
-        <p className="font-display text-lg font-bold text-steel-700">
+        <ShoppingBag className="mb-4 h-14 w-14 text-muted-foreground" />
+        <p className="font-display text-lg font-bold text-foreground">
           {t('emptyCart')}
         </p>
         <Button className="mt-6" asChild>
@@ -46,9 +46,9 @@ export function CartPage() {
         {items.map((item) => (
           <li
             key={item.listingId}
-            className="flex gap-3 rounded-2xl border border-steel-200 bg-white p-3 shadow-sm"
+            className="flex gap-3 rounded-2xl border border-border bg-card p-3 shadow-sm"
           >
-            <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-steel-100">
+            <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-muted">
               {item.image ? (
                 <SafeImage
                   src={item.image}
@@ -65,11 +65,11 @@ export function CartPage() {
             </div>
             <div className="flex min-w-0 flex-1 flex-col">
               <p className="line-clamp-2 text-sm font-semibold">{item.title}</p>
-              <p className="font-display font-bold text-bolt-800">
+              <p className="font-display font-bold text-bolt-800 dark:text-bolt-200">
                 {formatTZS(item.price)}
               </p>
               <div className="mt-auto flex items-center justify-between">
-                <div className="flex items-center rounded-lg border border-steel-200">
+                <div className="flex items-center rounded-lg border border-border">
                   <button
                     type="button"
                     className="flex h-9 w-9 items-center justify-center cursor-pointer"
@@ -106,18 +106,18 @@ export function CartPage() {
         ))}
       </ul>
 
-      <div className="space-y-2 rounded-2xl border border-steel-200 bg-white p-4 text-sm">
+      <div className="space-y-2 rounded-2xl border border-border bg-card p-4 text-sm">
         <div className="flex justify-between">
-          <span className="text-steel-500">{t('subtotal')}</span>
+          <span className="text-muted-foreground">{t('subtotal')}</span>
           <span className="font-semibold">{formatTZS(subtotal())}</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-steel-500">{t('deliveryFee')}</span>
+          <span className="text-muted-foreground">{t('deliveryFee')}</span>
           <span className="font-semibold">{formatTZS(deliveryFee)}</span>
         </div>
-        <div className="flex justify-between border-t border-steel-100 pt-2 font-display text-lg font-bold">
+        <div className="flex justify-between border-t border-border pt-2 font-display text-lg font-bold">
           <span>{t('total')}</span>
-          <span className="text-bolt-800">{formatTZS(total)}</span>
+          <span className="text-bolt-800 dark:text-bolt-200">{formatTZS(total)}</span>
         </div>
       </div>
 

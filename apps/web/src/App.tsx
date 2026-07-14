@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { AppShell } from '@/components/layout/app-shell';
 import { ProtectedRoute } from '@/components/layout/protected-route';
+import { useTheme } from '@/hooks/use-theme';
 import { HomePage } from '@/pages/home';
 import { BrowsePage } from '@/pages/browse';
 import { ListingDetailPage } from '@/pages/listing-detail';
@@ -25,10 +26,17 @@ import { DriverPage } from '@/pages/driver';
 import { AdminPage } from '@/pages/admin';
 import { NotificationsPage } from '@/pages/notifications';
 
+function ThemedToaster() {
+  const { theme } = useTheme();
+  return (
+    <Toaster position="top-center" richColors closeButton theme={theme} />
+  );
+}
+
 export default function App() {
   return (
     <BrowserRouter>
-      <Toaster position="top-center" richColors closeButton />
+      <ThemedToaster />
       <Routes>
         <Route element={<AppShell />}>
           <Route index element={<HomePage />} />

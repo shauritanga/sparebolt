@@ -17,6 +17,12 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ImageUploadField } from '@/components/image-upload-field';
+import {
+  emptyLocation,
+  LocationPicker,
+  locationToApiFields,
+  type LocationValue,
+} from '@/components/location-picker';
 
 const STEPS = [
   { id: 0, title: 'Business', icon: Building2 },
@@ -39,12 +45,7 @@ type FormState = {
   selfieUrl: string;
   dateOfBirth: string;
   secondaryPhone: string;
-  addressStreet: string;
-  addressArea: string;
-  addressWard: string;
-  city: string;
-  region: string;
-  addressLandmark: string;
+  location: LocationValue;
   shopExteriorUrl: string;
   shopInteriorUrl: string;
   payoutMethod: string;
@@ -70,12 +71,12 @@ function Field({
 }) {
   return (
     <div>
-      <label className="mb-1 block text-xs font-semibold text-steel-600">
+      <label className="mb-1 block text-xs font-semibold text-muted-foreground">
         {label}
         {required ? ' *' : ''}
       </label>
       {children}
-      {hint && <p className="mt-1 text-[11px] text-steel-400">{hint}</p>}
+      {hint && <p className="mt-1 text-[11px] text-muted-foreground">{hint}</p>}
     </div>
   );
 }
@@ -102,12 +103,7 @@ export function BecomeSellerPage() {
     selfieUrl: '',
     dateOfBirth: '',
     secondaryPhone: '',
-    addressStreet: '',
-    addressArea: '',
-    addressWard: '',
-    city: 'Dar es Salaam',
-    region: 'Dar es Salaam',
-    addressLandmark: '',
+    location: emptyLocation(),
     shopExteriorUrl: '',
     shopInteriorUrl: '',
     payoutMethod: 'mobile_money',
@@ -141,8 +137,10 @@ export function BecomeSellerPage() {
       if (!form.selfieUrl) return 'Selfie is required';
     }
     if (s === 2) {
-      if (!form.addressStreet.trim()) return 'Street address is required';
-      if (!form.city.trim()) return 'City is required';
+      if (!form.location.regionId) return 'Select a region';
+      if (!form.location.districtId) return 'Select a district';
+      if (!form.location.wardId) return 'Select a ward';
+      if (!form.location.street.trim()) return 'Street address is required';
     }
     if (s === 3) {
       if (!form.payoutAccountName.trim())
@@ -199,12 +197,17 @@ export function BecomeSellerPage() {
         selfieUrl: form.selfieUrl,
         dateOfBirth: form.dateOfBirth || undefined,
         secondaryPhone: form.secondaryPhone || undefined,
-        addressStreet: form.addressStreet,
-        addressArea: form.addressArea || undefined,
-        addressWard: form.addressWard || undefined,
-        city: form.city,
-        region: form.region || undefined,
-        addressLandmark: form.addressLandmark || undefined,
+        ...(() => {
+          const loc = locationToApiFields(form.location);
+          return {
+            addressStreet: loc.addressStreet,
+            addressArea: loc.addressArea,
+            addressWard: loc.addressWard,
+            city: loc.city,
+            region: loc.region,
+            addressLandmark: loc.addressLandmark,
+          };
+        })(),
         shopExteriorUrl: form.shopExteriorUrl || undefined,
         shopInteriorUrl: form.shopInteriorUrl || undefined,
         payoutMethod: form.payoutMethod,
@@ -239,7 +242,7 @@ export function BecomeSellerPage() {
         <h1 className="font-display text-2xl font-extrabold">
           Become a seller
         </h1>
-        <p className="mt-1 text-sm text-steel-600">
+        <p className="mt-1 text-sm text-muted-foreground">
           We verify identity and shop details so buyers can trust your listings.
         </p>
       </div>
@@ -254,9 +257,9 @@ export function BecomeSellerPage() {
               <div
                 className={cn(
                   'flex flex-col items-center gap-1 rounded-xl border px-1 py-2 text-center',
-                  active && 'border-bolt-600 bg-bolt-50',
-                  done && 'border-bolt-200 bg-bolt-50/50',
-                  !active && !done && 'border-steel-200 bg-white',
+                  active && 'border-bolt-600 bg-bolt-50 dark:bg-bolt-950/50',
+                  done && 'border-bolt-200 bg-bolt-50 dark:bg-bolt-950/50/50 dark:bg-bolt-950/40',
+                  !active && !done && 'border-border bg-card',
                 )}
               >
                 <span
@@ -264,7 +267,7 @@ export function BecomeSellerPage() {
                     'flex h-7 w-7 items-center justify-center rounded-full text-xs',
                     active || done
                       ? 'bg-bolt-700 text-white'
-                      : 'bg-steel-100 text-steel-500',
+                      : 'bg-muted text-muted-foreground',
                   )}
                 >
                   {done ? (
@@ -273,7 +276,7 @@ export function BecomeSellerPage() {
                     <Icon className="h-3.5 w-3.5" />
                   )}
                 </span>
-                <span className="text-[10px] font-bold text-steel-700">
+                <span className="text-[10px] font-bold text-foreground">
                   {s.title}
                 </span>
               </div>
@@ -282,10 +285,10 @@ export function BecomeSellerPage() {
         })}
       </ol>
 
-      <div className="space-y-3 rounded-2xl border border-steel-200 bg-white p-4 shadow-sm">
+      <div className="space-y-3 rounded-2xl border border-border bg-card p-4 shadow-sm">
         {step === 0 && (
           <>
-            <p className="text-sm font-bold text-steel-900">Business details</p>
+            <p className="text-sm font-bold text-foreground">Business details</p>
             <Field label="Business / trading name" required>
               <Input
                 value={form.businessName}
@@ -294,7 +297,7 @@ export function BecomeSellerPage() {
             </Field>
             <Field label="Business type" required>
               <select
-                className="h-12 w-full rounded-xl border border-steel-200 px-3 text-base"
+                className="h-12 w-full rounded-xl border border-border px-3 text-base"
                 value={form.businessType}
                 onChange={(e) => set('businessType', e.target.value)}
               >
@@ -305,7 +308,7 @@ export function BecomeSellerPage() {
             </Field>
             <Field label="Description">
               <textarea
-                className="min-h-20 w-full rounded-xl border border-steel-200 p-3 text-base"
+                className="min-h-20 w-full rounded-xl border border-border p-3 text-base"
                 placeholder="What parts do you specialise in?"
                 value={form.description}
                 onChange={(e) => set('description', e.target.value)}
@@ -346,10 +349,10 @@ export function BecomeSellerPage() {
 
         {step === 1 && (
           <>
-            <p className="text-sm font-bold text-steel-900">
+            <p className="text-sm font-bold text-foreground">
               Responsible person identity
             </p>
-            <p className="text-xs text-steel-500">
+            <p className="text-xs text-muted-foreground">
               The person who will be legally responsible for listings and
               escrow.
             </p>
@@ -406,50 +409,17 @@ export function BecomeSellerPage() {
 
         {step === 2 && (
           <>
-            <p className="text-sm font-bold text-steel-900">
+            <p className="text-sm font-bold text-foreground">
               Shop / stock location
             </p>
-            <Field label="Street / shop address" required>
-              <Input
-                value={form.addressStreet}
-                onChange={(e) => set('addressStreet', e.target.value)}
-              />
-            </Field>
-            <div className="grid grid-cols-2 gap-2">
-              <Field label="Area">
-                <Input
-                  value={form.addressArea}
-                  onChange={(e) => set('addressArea', e.target.value)}
-                />
-              </Field>
-              <Field label="Ward">
-                <Input
-                  value={form.addressWard}
-                  onChange={(e) => set('addressWard', e.target.value)}
-                />
-              </Field>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <Field label="City" required>
-                <Input
-                  value={form.city}
-                  onChange={(e) => set('city', e.target.value)}
-                />
-              </Field>
-              <Field label="Region">
-                <Input
-                  value={form.region}
-                  onChange={(e) => set('region', e.target.value)}
-                />
-              </Field>
-            </div>
-            <Field label="Landmark">
-              <Input
-                value={form.addressLandmark}
-                onChange={(e) => set('addressLandmark', e.target.value)}
-                placeholder="Near Kariakoo market…"
-              />
-            </Field>
+            <p className="text-xs text-muted-foreground">
+              Choose Region → District → Ward, then type the street.
+            </p>
+            <LocationPicker
+              value={form.location}
+              onChange={(location) => set('location', location)}
+              showLandmark
+            />
             <ImageUploadField
               label="Shop exterior photo (recommended)"
               hint="Helps us verify a real trading location"
@@ -466,13 +436,13 @@ export function BecomeSellerPage() {
 
         {step === 3 && (
           <>
-            <p className="text-sm font-bold text-steel-900">Payout & terms</p>
-            <p className="text-xs text-steel-500">
+            <p className="text-sm font-bold text-foreground">Payout & terms</p>
+            <p className="text-xs text-muted-foreground">
               Escrow releases only to an account whose name matches your ID.
             </p>
             <Field label="Payout method" required>
               <select
-                className="h-12 w-full rounded-xl border border-steel-200 px-3 text-base"
+                className="h-12 w-full rounded-xl border border-border px-3 text-base"
                 value={form.payoutMethod}
                 onChange={(e) => set('payoutMethod', e.target.value)}
               >
@@ -512,8 +482,8 @@ export function BecomeSellerPage() {
               </>
             )}
 
-            <div className="space-y-3 rounded-xl border border-bolt-100 bg-bolt-50 p-3">
-              <p className="flex items-center gap-2 text-sm font-bold text-bolt-900">
+            <div className="space-y-3 rounded-xl border border-bolt-100 dark:border-bolt-800 bg-bolt-50 dark:bg-bolt-950/50 p-3">
+              <p className="flex items-center gap-2 text-sm font-bold text-bolt-900 dark:text-bolt-100">
                 <Shield className="h-4 w-4" /> Legal consents
               </p>
               {(
@@ -534,11 +504,11 @@ export function BecomeSellerPage() {
               ).map(([key, label]) => (
                 <label
                   key={key}
-                  className="flex cursor-pointer items-start gap-2 text-sm text-steel-800"
+                  className="flex cursor-pointer items-start gap-2 text-sm text-foreground"
                 >
                   <input
                     type="checkbox"
-                    className="mt-1 h-4 w-4 rounded border-steel-300"
+                    className="mt-1 h-4 w-4 rounded border-border"
                     checked={form[key]}
                     onChange={(e) => set(key, e.target.checked)}
                   />

@@ -78,6 +78,7 @@ export type Address = {
   street: string;
   area?: string;
   city: string;
+  region?: string;
   isDefault: boolean;
   latitude?: number;
   longitude?: number;

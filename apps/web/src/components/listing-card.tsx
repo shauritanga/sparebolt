@@ -31,9 +31,9 @@ export function ListingCard({ listing }: { listing: Listing }) {
   return (
     <Link
       to={`/parts/${listing.id}`}
-      className="group flex flex-col overflow-hidden rounded-2xl border border-steel-200/80 bg-card shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-bolt-300 hover:shadow-md"
+      className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-bolt-300 hover:shadow-md"
     >
-      <div className="relative aspect-[4/3] overflow-hidden bg-steel-100">
+      <div className="relative aspect-[4/3] overflow-hidden bg-muted">
         <SafeImage
           src={img}
           alt={listing.title}
@@ -55,11 +55,11 @@ export function ListingCard({ listing }: { listing: Listing }) {
         </div>
       </div>
       <div className="flex flex-1 flex-col gap-1.5 p-3">
-        <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-steel-900 group-hover:text-bolt-800">
+        <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-foreground group-hover:text-bolt-700 dark:group-hover:text-bolt-300">
           {listing.title}
         </h3>
         {(listing.make || listing.model) && (
-          <p className="text-xs text-steel-500">
+          <p className="text-xs text-muted-foreground">
             {[
               listing.make,
               listing.model,
@@ -73,17 +73,17 @@ export function ListingCard({ listing }: { listing: Listing }) {
 
         {/* Price: sale = big sale price + struck old price */}
         <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-          <p className="font-display text-lg font-bold tabular-nums text-bolt-800">
+          <p className="font-display text-lg font-bold tabular-nums text-bolt-800 dark:text-bolt-200">
             {formatTZS(listing.price)}
           </p>
           {onSale && (
-            <p className="text-sm font-medium tabular-nums text-steel-400 line-through decoration-steel-400">
+            <p className="text-sm font-medium tabular-nums text-muted-foreground line-through decoration-muted-foreground">
               {formatTZS(listing.compareAtPrice!)}
             </p>
           )}
         </div>
 
-        <div className="mt-auto flex items-center justify-between pt-1 text-xs text-steel-500">
+        <div className="mt-auto flex items-center justify-between pt-1 text-xs text-muted-foreground">
           <span className="inline-flex items-center gap-0.5">
             <MapPin className="h-3 w-3" />
             {listing.city}

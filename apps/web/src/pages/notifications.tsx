@@ -42,19 +42,19 @@ export function NotificationsPage() {
             key={n.id}
             className={`rounded-2xl border p-4 ${
               n.read
-                ? 'border-steel-100 bg-white'
-                : 'border-bolt-200 bg-bolt-50'
+                ? 'border-border bg-card'
+                : 'border-bolt-200 bg-bolt-50 dark:bg-bolt-950/50'
             }`}
           >
-            <p className="font-semibold text-steel-900">{n.title}</p>
-            <p className="text-sm text-steel-600">{n.body}</p>
-            <p className="mt-1 text-xs text-steel-400">
+            <p className="font-semibold text-foreground">{n.title}</p>
+            <p className="text-sm text-muted-foreground">{n.body}</p>
+            <p className="mt-1 text-xs text-muted-foreground">
               {formatRelative(n.createdAt)}
             </p>
           </li>
         ))}
         {!items.length && (
-          <p className="py-12 text-center text-sm text-steel-500">
+          <p className="py-12 text-center text-sm text-muted-foreground">
             No notifications yet
           </p>
         )}

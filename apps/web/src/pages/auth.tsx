@@ -57,11 +57,11 @@ export function LoginPage() {
 
   return (
     <AuthCard title={t('login')}>
-      <div className="mb-4 flex rounded-xl bg-steel-100 p-1">
+      <div className="mb-4 flex rounded-xl bg-muted p-1">
         <button
           type="button"
           className={`flex-1 rounded-lg py-2 text-sm font-semibold cursor-pointer ${
-            mode === 'password' ? 'bg-white shadow-sm' : 'text-steel-500'
+            mode === 'password' ? 'bg-card shadow-sm' : 'text-muted-foreground'
           }`}
           onClick={() => setMode('password')}
         >
@@ -70,7 +70,7 @@ export function LoginPage() {
         <button
           type="button"
           className={`flex-1 rounded-lg py-2 text-sm font-semibold cursor-pointer ${
-            mode === 'otp' ? 'bg-white shadow-sm' : 'text-steel-500'
+            mode === 'otp' ? 'bg-card shadow-sm' : 'text-muted-foreground'
           }`}
           onClick={() => setMode('otp')}
         >
@@ -124,7 +124,7 @@ export function LoginPage() {
                 required
               />
               {debugCode && (
-                <p className="text-xs text-steel-500">Dev OTP: {debugCode}</p>
+                <p className="text-xs text-muted-foreground">Dev OTP: {debugCode}</p>
               )}
               <Button type="submit" className="w-full" loading={loading}>
                 Verify & login
@@ -134,12 +134,12 @@ export function LoginPage() {
         </form>
       )}
 
-      <p className="mt-4 text-center text-sm text-steel-500">
+      <p className="mt-4 text-center text-sm text-muted-foreground">
         Demo: customer@sparebolt.tz / password123
       </p>
       <p className="mt-2 text-center text-sm">
         No account?{' '}
-        <Link to="/auth/register" className="font-semibold text-bolt-700">
+        <Link to="/auth/register" className="font-semibold text-bolt-700 dark:text-bolt-300">
           {t('register')}
         </Link>
       </p>
@@ -219,7 +219,7 @@ export function RegisterPage() {
       </form>
       <p className="mt-4 text-center text-sm">
         Have an account?{' '}
-        <Link to="/auth/login" className="font-semibold text-bolt-700">
+        <Link to="/auth/login" className="font-semibold text-bolt-700 dark:text-bolt-300">
           {t('login')}
         </Link>
       </p>
@@ -242,7 +242,7 @@ function AuthCard({
         </span>
         <h1 className="font-display text-2xl font-extrabold">{title}</h1>
       </div>
-      <div className="rounded-3xl border border-steel-200 bg-white p-6 shadow-sm">
+      <div className="rounded-3xl border border-border bg-card p-6 shadow-sm">
         {children}
       </div>
     </div>

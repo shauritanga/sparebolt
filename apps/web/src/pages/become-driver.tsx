@@ -17,6 +17,12 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ImageUploadField } from '@/components/image-upload-field';
+import {
+  emptyLocation,
+  LocationPicker,
+  locationToApiFields,
+  type LocationValue,
+} from '@/components/location-picker';
 
 const STEPS = [
   { id: 0, title: 'Identity', icon: IdCard },
@@ -33,11 +39,7 @@ type FormState = {
   selfieUrl: string;
   dateOfBirth: string;
   secondaryPhone: string;
-  addressStreet: string;
-  addressArea: string;
-  addressWard: string;
-  city: string;
-  addressLandmark: string;
+  location: LocationValue;
   vehicleType: string;
   vehiclePlate: string;
   vehicleMake: string;
@@ -77,11 +79,7 @@ const initial: FormState = {
   selfieUrl: '',
   dateOfBirth: '',
   secondaryPhone: '',
-  addressStreet: '',
-  addressArea: '',
-  addressWard: '',
-  city: 'Dar es Salaam',
-  addressLandmark: '',
+  location: emptyLocation(),
   vehicleType: 'motorcycle',
   vehiclePlate: '',
   vehicleMake: '',
@@ -126,12 +124,12 @@ function Field({
 }) {
   return (
     <div>
-      <label className="mb-1 block text-xs font-semibold text-steel-600">
+      <label className="mb-1 block text-xs font-semibold text-muted-foreground">
         {label}
         {required ? ' *' : ''}
       </label>
       {children}
-      {hint && <p className="mt-1 text-[11px] text-steel-400">{hint}</p>}
+      {hint && <p className="mt-1 text-[11px] text-muted-foreground">{hint}</p>}
     </div>
   );
 }
@@ -164,8 +162,10 @@ export function BecomeDriverPage() {
       if (!form.nationalIdFrontUrl.trim()) return 'ID front photo URL is required';
       if (!form.nationalIdBackUrl.trim()) return 'ID back photo URL is required';
       if (!form.selfieUrl.trim()) return 'Selfie URL is required';
-      if (!form.addressStreet.trim()) return 'Street address is required';
-      if (!form.city.trim()) return 'City is required';
+      if (!form.location.regionId) return 'Select a region';
+      if (!form.location.districtId) return 'Select a district';
+      if (!form.location.wardId) return 'Select a ward';
+      if (!form.location.street.trim()) return 'Street address is required';
     }
     if (s === 1) {
       if (!form.vehiclePlate.trim()) return 'Vehicle plate is required';
@@ -215,8 +215,10 @@ export function BecomeDriverPage() {
     }
     setLoading(true);
     try {
+      const { location: _loc, ...rest } = form;
+      const loc = locationToApiFields(form.location);
       const payload = {
-        ...form,
+        ...rest,
         vehicleYear: form.vehicleYear ? Number(form.vehicleYear) : undefined,
         dateOfBirth: form.dateOfBirth || undefined,
         insuranceExpiresAt: form.insuranceExpiresAt || undefined,
@@ -230,9 +232,11 @@ export function BecomeDriverPage() {
         vehicleModel: form.vehicleModel || undefined,
         vehicleColor: form.vehicleColor || undefined,
         licenseClass: form.licenseClass || undefined,
-        addressArea: form.addressArea || undefined,
-        addressWard: form.addressWard || undefined,
-        addressLandmark: form.addressLandmark || undefined,
+        addressStreet: loc.addressStreet,
+        addressArea: loc.addressArea,
+        addressWard: loc.addressWard,
+        city: loc.city,
+        addressLandmark: loc.addressLandmark,
         bankName: form.bankName || undefined,
         bankAccountNumber: form.bankAccountNumber || undefined,
         emergencyRelation: form.emergencyRelation || undefined,
@@ -258,7 +262,7 @@ export function BecomeDriverPage() {
     <div className="mx-auto max-w-lg space-y-4 pb-8">
       <div>
         <h1 className="font-display text-2xl font-extrabold">Become a driver</h1>
-        <p className="mt-1 text-sm text-steel-600">
+        <p className="mt-1 text-sm text-muted-foreground">
           We verify identity and vehicle so deliveries stay safe and traceable.
         </p>
       </div>
@@ -274,9 +278,9 @@ export function BecomeDriverPage() {
               <div
                 className={cn(
                   'flex flex-col items-center gap-1 rounded-xl border px-1 py-2 text-center',
-                  active && 'border-bolt-600 bg-bolt-50',
-                  done && 'border-bolt-200 bg-bolt-50/50',
-                  !active && !done && 'border-steel-200 bg-white',
+                  active && 'border-bolt-600 bg-bolt-50 dark:bg-bolt-950/50',
+                  done && 'border-bolt-200 bg-bolt-50 dark:bg-bolt-950/50/50 dark:bg-bolt-950/40',
+                  !active && !done && 'border-border bg-card',
                 )}
               >
                 <span
@@ -284,12 +288,12 @@ export function BecomeDriverPage() {
                     'flex h-7 w-7 items-center justify-center rounded-full text-xs',
                     active || done
                       ? 'bg-bolt-700 text-white'
-                      : 'bg-steel-100 text-steel-500',
+                      : 'bg-muted text-muted-foreground',
                   )}
                 >
                   {done ? <Check className="h-3.5 w-3.5" /> : <Icon className="h-3.5 w-3.5" />}
                 </span>
-                <span className="text-[10px] font-bold text-steel-700">
+                <span className="text-[10px] font-bold text-foreground">
                   {s.title}
                 </span>
               </div>
@@ -298,10 +302,10 @@ export function BecomeDriverPage() {
         })}
       </ol>
 
-      <div className="space-y-3 rounded-2xl border border-steel-200 bg-white p-4 shadow-sm">
+      <div className="space-y-3 rounded-2xl border border-border bg-card p-4 shadow-sm">
         {step === 0 && (
           <>
-            <p className="text-sm font-bold text-steel-900">Identity & address</p>
+            <p className="text-sm font-bold text-foreground">Identity & address</p>
             <Field label="Legal full name (as on ID)" required>
               <Input
                 value={form.legalFullName}
@@ -353,51 +357,23 @@ export function BecomeDriverPage() {
                 />
               </Field>
             </div>
-            <Field label="Street / house address" required>
-              <Input
-                value={form.addressStreet}
-                onChange={(e) => set('addressStreet', e.target.value)}
-                required
-              />
-            </Field>
-            <div className="grid grid-cols-2 gap-2">
-              <Field label="Area">
-                <Input
-                  value={form.addressArea}
-                  onChange={(e) => set('addressArea', e.target.value)}
-                />
-              </Field>
-              <Field label="Ward">
-                <Input
-                  value={form.addressWard}
-                  onChange={(e) => set('addressWard', e.target.value)}
-                />
-              </Field>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <Field label="City" required>
-                <Input
-                  value={form.city}
-                  onChange={(e) => set('city', e.target.value)}
-                  required
-                />
-              </Field>
-              <Field label="Landmark">
-                <Input
-                  value={form.addressLandmark}
-                  onChange={(e) => set('addressLandmark', e.target.value)}
-                />
-              </Field>
-            </div>
+            <p className="text-xs text-muted-foreground">
+              Choose Region → District → Ward, then type your street.
+            </p>
+            <LocationPicker
+              value={form.location}
+              onChange={(location) => set('location', location)}
+              showLandmark
+            />
           </>
         )}
 
         {step === 1 && (
           <>
-            <p className="text-sm font-bold text-steel-900">Vehicle & licence</p>
+            <p className="text-sm font-bold text-foreground">Vehicle & licence</p>
             <Field label="Vehicle type" required>
               <select
-                className="h-12 w-full rounded-xl border border-steel-200 px-3 text-base"
+                className="h-12 w-full rounded-xl border border-border px-3 text-base"
                 value={form.vehicleType}
                 onChange={(e) => set('vehicleType', e.target.value)}
               >
@@ -500,14 +476,14 @@ export function BecomeDriverPage() {
 
         {step === 2 && (
           <>
-            <p className="text-sm font-bold text-steel-900">Payout account</p>
-            <p className="text-xs text-steel-500">
+            <p className="text-sm font-bold text-foreground">Payout account</p>
+            <p className="text-xs text-muted-foreground">
               Account name must match your national ID name. Earnings are only
               paid to a verified matching account.
             </p>
             <Field label="Payout method" required>
               <select
-                className="h-12 w-full rounded-xl border border-steel-200 px-3 text-base"
+                className="h-12 w-full rounded-xl border border-border px-3 text-base"
                 value={form.payoutMethod}
                 onChange={(e) => set('payoutMethod', e.target.value)}
               >
@@ -551,7 +527,7 @@ export function BecomeDriverPage() {
 
         {step === 3 && (
           <>
-            <p className="text-sm font-bold text-steel-900">
+            <p className="text-sm font-bold text-foreground">
               Emergency contact & guarantor
             </p>
             <Field label="Emergency contact name" required>
@@ -578,7 +554,7 @@ export function BecomeDriverPage() {
               </Field>
             </div>
 
-            <p className="pt-2 text-xs font-bold uppercase text-steel-400">
+            <p className="pt-2 text-xs font-bold uppercase text-muted-foreground">
               Guarantor (recommended)
             </p>
             <Field label="Guarantor full name">
@@ -607,8 +583,8 @@ export function BecomeDriverPage() {
               />
             </Field>
 
-            <div className="space-y-3 rounded-xl border border-bolt-100 bg-bolt-50 p-3">
-              <p className="flex items-center gap-2 text-sm font-bold text-bolt-900">
+            <div className="space-y-3 rounded-xl border border-bolt-100 dark:border-bolt-800 bg-bolt-50 dark:bg-bolt-950/50 p-3">
+              <p className="flex items-center gap-2 text-sm font-bold text-bolt-900 dark:text-bolt-100">
                 <Shield className="h-4 w-4" /> Legal consents
               </p>
               {(
@@ -629,11 +605,11 @@ export function BecomeDriverPage() {
               ).map(([key, label]) => (
                 <label
                   key={key}
-                  className="flex cursor-pointer items-start gap-2 text-sm text-steel-800"
+                  className="flex cursor-pointer items-start gap-2 text-sm text-foreground"
                 >
                   <input
                     type="checkbox"
-                    className="mt-1 h-4 w-4 rounded border-steel-300"
+                    className="mt-1 h-4 w-4 rounded border-border"
                     checked={form[key]}
                     onChange={(e) => set(key, e.target.checked)}
                   />

@@ -64,9 +64,9 @@ export function ListingDetailPage() {
   if (loading) {
     return (
       <div className="animate-pulse space-y-4">
-        <div className="aspect-square rounded-2xl bg-steel-200" />
-        <div className="h-8 w-2/3 rounded bg-steel-200" />
-        <div className="h-6 w-1/3 rounded bg-steel-200" />
+        <div className="aspect-square rounded-2xl bg-muted" />
+        <div className="h-8 w-2/3 rounded bg-muted" />
+        <div className="h-6 w-1/3 rounded bg-muted" />
       </div>
     );
   }
@@ -74,7 +74,7 @@ export function ListingDetailPage() {
   if (!listing) {
     return (
       <div className="py-16 text-center">
-        <p className="text-steel-500">Part not found</p>
+        <p className="text-muted-foreground">Part not found</p>
         <Button className="mt-4" onClick={() => void navigate('/browse')}>
           {t('browse')}
         </Button>
@@ -202,13 +202,13 @@ export function ListingDetailPage() {
       <button
         type="button"
         onClick={() => void navigate(-1)}
-        className="inline-flex min-h-[44px] items-center gap-1 text-sm font-semibold text-steel-600 cursor-pointer"
+        className="inline-flex min-h-[44px] items-center gap-1 text-sm font-semibold text-muted-foreground cursor-pointer"
       >
         <ArrowLeft className="h-4 w-4" /> Back
       </button>
 
-      <div className="overflow-hidden rounded-3xl border border-steel-200 bg-white shadow-sm">
-        <div className="relative aspect-square bg-steel-100 sm:aspect-[16/10]">
+      <div className="overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
+        <div className="relative aspect-square bg-muted sm:aspect-[16/10]">
           <SafeImage
             src={images[imgIdx]?.url}
             alt={listing.title}
@@ -251,7 +251,7 @@ export function ListingDetailPage() {
       </div>
 
       <div className="space-y-3">
-        <h1 className="font-display text-2xl font-extrabold text-steel-900">
+        <h1 className="font-display text-2xl font-extrabold text-foreground">
           {listing.title}
         </h1>
         {(() => {
@@ -262,11 +262,11 @@ export function ListingDetailPage() {
           return (
             <div className="space-y-1">
               <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                <p className="font-display text-3xl font-bold tabular-nums text-bolt-800">
+                <p className="font-display text-3xl font-bold tabular-nums text-bolt-800 dark:text-bolt-200">
                   {formatTZS(listing.price)}
                 </p>
                 {onSale && (
-                  <p className="text-lg font-medium tabular-nums text-steel-400 line-through">
+                  <p className="text-lg font-medium tabular-nums text-muted-foreground line-through">
                     {formatTZS(listing.compareAtPrice!)}
                   </p>
                 )}
@@ -279,12 +279,12 @@ export function ListingDetailPage() {
             </div>
           );
         })()}
-        <div className="flex flex-wrap gap-2 text-sm text-steel-600">
+        <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
           <span className="inline-flex items-center gap-1">
             <MapPin className="h-4 w-4" /> {listing.city}
           </span>
           {listing.partNumber && (
-            <span className="rounded-lg bg-steel-100 px-2 py-0.5 font-mono text-xs">
+            <span className="rounded-lg bg-muted px-2 py-0.5 font-mono text-xs">
               #{listing.partNumber}
             </span>
           )}
@@ -292,7 +292,7 @@ export function ListingDetailPage() {
       </div>
 
       {/* Trust badges — before tabs */}
-      <section className="rounded-2xl border border-steel-200 bg-white px-2 py-4 shadow-sm">
+      <section className="rounded-2xl border border-border bg-card px-2 py-4 shadow-sm">
         <ul className="grid grid-cols-4 gap-1">
           {trustBadges.map(({ title, subtitle, icon: Icon, wrap }) => (
             <li
@@ -307,10 +307,10 @@ export function ListingDetailPage() {
               >
                 <Icon className="h-5 w-5" strokeWidth={2} />
               </span>
-              <p className="w-full truncate text-[10px] font-bold leading-tight text-steel-800 sm:text-xs">
+              <p className="w-full truncate text-[10px] font-bold leading-tight text-foreground sm:text-xs">
                 {title}
               </p>
-              <p className="w-full text-[9px] leading-snug text-steel-500 sm:text-[10px]">
+              <p className="w-full text-[9px] leading-snug text-muted-foreground sm:text-[10px]">
                 {subtitle}
               </p>
             </li>
@@ -319,8 +319,8 @@ export function ListingDetailPage() {
       </section>
 
       {/* Tabs: Overview · Specifications · Reviews · Seller Info */}
-      <section className="overflow-hidden rounded-2xl border border-steel-200 bg-white shadow-sm">
-        <div className="flex gap-0 overflow-x-auto border-b border-steel-100 px-1">
+      <section className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+        <div className="flex gap-0 overflow-x-auto border-b border-border px-1">
           {tabs.map((item) => (
             <button
               key={item.id}
@@ -329,8 +329,8 @@ export function ListingDetailPage() {
               className={cn(
                 'relative shrink-0 px-3 py-3.5 text-sm font-semibold transition-colors cursor-pointer min-h-[44px]',
                 tab === item.id
-                  ? 'text-bolt-700'
-                  : 'text-steel-400 hover:text-steel-600',
+                  ? 'text-bolt-700 dark:text-bolt-300'
+                  : 'text-muted-foreground hover:text-muted-foreground',
               )}
             >
               {item.label}
@@ -345,27 +345,27 @@ export function ListingDetailPage() {
           {tab === 'overview' && (
             <div className="space-y-5">
               <div>
-                <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-steel-400">
+                <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">
                   Product description
                 </h3>
-                <p className="text-sm leading-relaxed text-steel-700 whitespace-pre-wrap">
+                <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
                   {listing.description}
                 </p>
               </div>
 
-              <div className="space-y-0 divide-y divide-steel-100 rounded-xl border border-steel-100">
+              <div className="space-y-0 divide-y divide-border rounded-xl border border-border">
                 <div className="flex items-start gap-3 p-3">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-bolt-50 text-bolt-700">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-bolt-50 dark:bg-bolt-950/50 text-bolt-700 dark:text-bolt-300">
                     <Truck className="h-4 w-4" />
                   </span>
                   <div className="min-w-0">
-                    <p className="text-xs font-semibold text-steel-400">
+                    <p className="text-xs font-semibold text-muted-foreground">
                       Estimated delivery
                     </p>
-                    <p className="text-sm font-semibold text-steel-900">
+                    <p className="text-sm font-semibold text-foreground">
                       {deliveryDaysMin}–{deliveryDaysMax} days
                     </p>
-                    <p className="text-xs text-steel-500">
+                    <p className="text-xs text-muted-foreground">
                       After payment is confirmed (escrow)
                     </p>
                   </div>
@@ -375,13 +375,13 @@ export function ListingDetailPage() {
                     <Package className="h-4 w-4" />
                   </span>
                   <div className="min-w-0">
-                    <p className="text-xs font-semibold text-steel-400">
+                    <p className="text-xs font-semibold text-muted-foreground">
                       Shipment from
                     </p>
-                    <p className="text-sm font-semibold text-steel-900">
+                    <p className="text-sm font-semibold text-foreground">
                       {shipFrom}
                     </p>
-                    <p className="text-xs text-steel-500">
+                    <p className="text-xs text-muted-foreground">
                       Seller location · local driver delivery
                     </p>
                   </div>
@@ -391,13 +391,13 @@ export function ListingDetailPage() {
                     <RotateCcw className="h-4 w-4" />
                   </span>
                   <div className="min-w-0">
-                    <p className="text-xs font-semibold text-steel-400">
+                    <p className="text-xs font-semibold text-muted-foreground">
                       Return policy
                     </p>
-                    <p className="text-sm font-semibold text-steel-900">
+                    <p className="text-sm font-semibold text-foreground">
                       {returnDays}-day return policy
                     </p>
-                    <p className="text-xs text-steel-500">
+                    <p className="text-xs text-muted-foreground">
                       Open a dispute if the part is wrong, damaged, or not as
                       described. Escrow is held until you confirm receipt.
                     </p>
@@ -408,14 +408,14 @@ export function ListingDetailPage() {
           )}
 
           {tab === 'specs' && (
-            <dl className="divide-y divide-steel-100">
+            <dl className="divide-y divide-border">
               {specs.map((row) => (
                 <div
                   key={row.label}
                   className="grid grid-cols-[minmax(0,42%)_1fr] gap-3 py-3 first:pt-0 last:pb-0"
                 >
-                  <dt className="text-sm text-steel-400">{row.label}</dt>
-                  <dd className="text-sm font-semibold text-steel-900">
+                  <dt className="text-sm text-muted-foreground">{row.label}</dt>
+                  <dd className="text-sm font-semibold text-foreground">
                     {row.value}
                   </dd>
                 </div>
@@ -425,10 +425,10 @@ export function ListingDetailPage() {
 
           {tab === 'reviews' && (
             <div className="py-8 text-center">
-              <p className="text-sm font-semibold text-steel-700">
+              <p className="text-sm font-semibold text-foreground">
                 No reviews yet
               </p>
-              <p className="mt-1 text-xs text-steel-500">
+              <p className="mt-1 text-xs text-muted-foreground">
                 Buyers can rate this seller after delivery is confirmed.
               </p>
             </div>
@@ -437,20 +437,20 @@ export function ListingDetailPage() {
           {tab === 'seller' && listing.seller && (
             <div className="space-y-3 text-sm">
               <div className="grid grid-cols-[minmax(0,42%)_1fr] gap-3 py-1">
-                <span className="text-steel-400">Business</span>
-                <span className="font-semibold text-steel-900">
+                <span className="text-muted-foreground">Business</span>
+                <span className="font-semibold text-foreground">
                   {listing.seller.businessName}
                 </span>
               </div>
               <div className="grid grid-cols-[minmax(0,42%)_1fr] gap-3 py-1">
-                <span className="text-steel-400">City</span>
-                <span className="font-semibold text-steel-900">
+                <span className="text-muted-foreground">City</span>
+                <span className="font-semibold text-foreground">
                   {listing.seller.city}
                 </span>
               </div>
               <div className="grid grid-cols-[minmax(0,42%)_1fr] gap-3 py-1">
-                <span className="text-steel-400">Rating</span>
-                <span className="inline-flex items-center gap-1 font-semibold text-steel-900">
+                <span className="text-muted-foreground">Rating</span>
+                <span className="inline-flex items-center gap-1 font-semibold text-foreground">
                   <Star className="h-3.5 w-3.5 fill-amber-signal text-amber-signal" />
                   {listing.seller.ratingAvg.toFixed(1)} (
                   {listing.seller.ratingCount})
@@ -460,23 +460,23 @@ export function ListingDetailPage() {
           )}
 
           {tab === 'seller' && !listing.seller && (
-            <p className="text-sm text-steel-500">Seller details unavailable.</p>
+            <p className="text-sm text-muted-foreground">Seller details unavailable.</p>
           )}
         </div>
       </section>
 
       {/* Sold by card — below specs (matches reference layout) */}
       {listing.seller && (
-        <div className="flex items-center gap-3 rounded-2xl border border-steel-200 bg-white p-4 shadow-sm">
+        <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-steel-900 text-xs font-bold text-white">
             {sellerInitials || 'S'}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-xs text-steel-400">Sold by</p>
-            <p className="truncate font-display font-bold text-steel-900">
+            <p className="text-xs text-muted-foreground">Sold by</p>
+            <p className="truncate font-display font-bold text-foreground">
               {sellerName}
             </p>
-            <p className="flex items-center gap-1 text-sm text-steel-500">
+            <p className="flex items-center gap-1 text-sm text-muted-foreground">
               <Star className="h-3.5 w-3.5 fill-amber-signal text-amber-signal" />
               {listing.seller.ratingAvg.toFixed(1)}
             </p>
@@ -485,7 +485,7 @@ export function ListingDetailPage() {
             type="button"
             variant="outline"
             size="sm"
-            className="shrink-0 rounded-full border-bolt-600 text-bolt-700"
+            className="shrink-0 rounded-full border-bolt-600 text-bolt-700 dark:text-bolt-300"
             onClick={() => setTab('seller')}
           >
             View Store
@@ -493,8 +493,8 @@ export function ListingDetailPage() {
         </div>
       )}
 
-      <div className="flex items-start gap-2 rounded-2xl bg-bolt-50 p-4 text-sm text-bolt-900">
-        <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-bolt-700" />
+      <div className="flex items-start gap-2 rounded-2xl bg-bolt-50 dark:bg-bolt-950/50 p-4 text-sm text-bolt-900 dark:text-bolt-100">
+        <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-bolt-700 dark:text-bolt-300" />
         <p>{t('escrowNote')}</p>
       </div>
 
@@ -502,14 +502,14 @@ export function ListingDetailPage() {
 
       <Link
         to="/browse"
-        className="block pb-2 text-center text-sm font-semibold text-bolt-700"
+        className="block pb-2 text-center text-sm font-semibold text-bolt-700 dark:text-bolt-300"
       >
         {t('continueShopping')}
       </Link>
 
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-steel-200 bg-white/95 px-3 py-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] shadow-[0_-4px_20px_rgba(15,23,42,0.08)] backdrop-blur-md md:left-1/2 md:right-auto md:w-full md:max-w-3xl md:-translate-x-1/2 md:rounded-t-2xl md:border md:border-b-0 md:px-4">
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card/95 px-3 py-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] shadow-[0_-4px_20px_rgba(15,23,42,0.08)] backdrop-blur-md md:left-1/2 md:right-auto md:w-full md:max-w-3xl md:-translate-x-1/2 md:rounded-t-2xl md:border md:border-b-0 md:px-4">
         <div className="mx-auto flex w-full max-w-3xl items-center gap-1.5 sm:gap-2">
-          <div className="flex h-11 shrink-0 items-center rounded-xl border border-steel-200 bg-white">
+          <div className="flex h-11 shrink-0 items-center rounded-xl border border-border bg-card">
             <button
               type="button"
               className="flex h-11 w-8 items-center justify-center cursor-pointer sm:w-10"

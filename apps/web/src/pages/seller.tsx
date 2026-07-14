@@ -9,6 +9,11 @@ import { Badge } from '@/components/ui/badge';
 import { SafeImage } from '@/components/safe-image';
 import { ImageUploadField } from '@/components/image-upload-field';
 import { useAuthStore } from '@/stores/auth-store';
+import {
+  emptyLocation,
+  LocationPicker,
+  type LocationValue,
+} from '@/components/location-picker';
 
 export function SellerDashboardPage() {
   const sellerProfile = useAuthStore((s) => s.user?.sellerProfile);
@@ -33,12 +38,12 @@ export function SellerDashboardPage() {
         <h1 className="font-display text-2xl font-extrabold">Seller</h1>
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-left">
           <Badge variant="warning">{sellerProfile.status}</Badge>
-          <p className="mt-3 font-semibold text-steel-900">
+          <p className="mt-3 font-semibold text-foreground">
             {sellerProfile.status === 'PENDING'
               ? 'Your seller application is under review'
               : 'You cannot list parts right now'}
           </p>
-          <p className="mt-2 text-sm text-steel-600">
+          <p className="mt-2 text-sm text-muted-foreground">
             {sellerProfile.status === 'PENDING'
               ? 'An admin must verify your ID and shop before you can create listings.'
               : sellerProfile.rejectionReason ||
@@ -50,7 +55,7 @@ export function SellerDashboardPage() {
   }
 
   if (!data) {
-    return <div className="h-40 animate-pulse rounded-2xl bg-steel-200/60" />;
+    return <div className="h-40 animate-pulse rounded-2xl bg-muted" />;
   }
 
   const stats = [
@@ -67,7 +72,7 @@ export function SellerDashboardPage() {
           <h1 className="font-display text-2xl font-extrabold">
             {data.businessName}
           </h1>
-          <p className="text-sm text-steel-500">Seller dashboard</p>
+          <p className="text-sm text-muted-foreground">Seller dashboard</p>
         </div>
         <Button asChild>
           <Link to="/seller/listings/new">New listing</Link>
@@ -78,12 +83,12 @@ export function SellerDashboardPage() {
         {stats.map((s) => (
           <div
             key={s.label}
-            className="rounded-2xl border border-steel-200 bg-white p-4 shadow-sm"
+            className="rounded-2xl border border-border bg-card p-4 shadow-sm"
           >
-            <p className="text-xs font-semibold uppercase text-steel-400">
+            <p className="text-xs font-semibold uppercase text-muted-foreground">
               {s.label}
             </p>
-            <p className="font-display text-xl font-bold text-bolt-800">
+            <p className="font-display text-xl font-bold text-bolt-800 dark:text-bolt-200">
               {s.value}
             </p>
           </div>
@@ -137,9 +142,9 @@ export function SellerListingsPage() {
         {listings.map((l) => (
           <li
             key={l.id}
-            className="flex items-center gap-3 rounded-2xl border border-steel-200 bg-white p-3"
+            className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3"
           >
-            <div className="h-14 w-14 overflow-hidden rounded-xl bg-steel-100">
+            <div className="h-14 w-14 overflow-hidden rounded-xl bg-muted">
               <SafeImage
                 src={l.images?.[0]?.url}
                 alt=""
@@ -148,7 +153,7 @@ export function SellerListingsPage() {
             </div>
             <div className="min-w-0 flex-1">
               <p className="truncate font-semibold">{l.title}</p>
-              <p className="text-sm text-bolt-800 font-bold">
+              <p className="text-sm text-bolt-800 dark:text-bolt-200 font-bold">
                 {formatTZS(l.price)} · qty {l.quantity}
               </p>
             </div>
@@ -181,8 +186,8 @@ export function NewListingPage() {
     model: '',
     yearFrom: '',
     yearTo: '',
-    city: 'Dar es Salaam',
   });
+  const [location, setLocation] = useState<LocationValue>(emptyLocation());
   /** Always start with 3 required image slots */
   const [images, setImages] = useState<string[]>(['', '', '']);
 
@@ -218,7 +223,11 @@ export function NewListingPage() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (filledImages.length < MIN_IMAGES) {
-      toast.error(`Add at least ${MIN_IMAGES} product photos (URLs)`);
+      toast.error(`Add at least ${MIN_IMAGES} product photos`);
+      return;
+    }
+    if (!location.regionId || !location.districtId) {
+      toast.error('Select region and district for stock location');
       return;
     }
     setLoading(true);
@@ -238,7 +247,8 @@ export function NewListingPage() {
         model: form.model || undefined,
         yearFrom: form.yearFrom ? Number(form.yearFrom) : undefined,
         yearTo: form.yearTo ? Number(form.yearTo) : undefined,
-        city: form.city,
+        // District is the primary place name for search / display
+        city: location.district,
         images: filledImages,
       });
       toast.success('Listing created');
@@ -261,7 +271,7 @@ export function NewListingPage() {
       <h1 className="font-display text-2xl font-extrabold">New listing</h1>
       <form onSubmit={(e) => void submit(e)} className="space-y-3">
         <select
-          className="h-12 w-full rounded-xl border border-steel-200 px-3"
+          className="h-12 w-full rounded-xl border border-border px-3"
           value={form.categoryId}
           onChange={(e) => setForm((f) => ({ ...f, categoryId: e.target.value }))}
         >
@@ -278,7 +288,7 @@ export function NewListingPage() {
           onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
         />
         <textarea
-          className="min-h-24 w-full rounded-xl border border-steel-200 p-3 text-base"
+          className="min-h-24 w-full rounded-xl border border-border p-3 text-base"
           placeholder="Description"
           required
           minLength={10}
@@ -304,7 +314,7 @@ export function NewListingPage() {
             }
           />
         </div>
-        <p className="text-[11px] text-steel-500">
+        <p className="text-[11px] text-muted-foreground">
           Optional “was” price shows struck-through on the card when higher than
           the sale price.
         </p>
@@ -318,7 +328,7 @@ export function NewListingPage() {
           }
         />
         <select
-          className="h-12 w-full rounded-xl border border-steel-200 px-3"
+          className="h-12 w-full rounded-xl border border-border px-3"
           value={form.condition}
           onChange={(e) =>
             setForm((f) => ({ ...f, condition: e.target.value }))
@@ -348,12 +358,25 @@ export function NewListingPage() {
           }
         />
 
+        <div className="space-y-2 rounded-2xl border border-border bg-card p-3">
+          <p className="text-sm font-bold text-foreground">Stock location</p>
+          <p className="text-[11px] text-muted-foreground">
+            Where the part ships from (Region → District)
+          </p>
+          <LocationPicker
+            value={location}
+            onChange={setLocation}
+            filterMode
+            requireDistrict
+          />
+        </div>
+
         {/* Photos — minimum 3 required */}
-        <div className="space-y-2 rounded-2xl border border-steel-200 bg-white p-3">
+        <div className="space-y-2 rounded-2xl border border-border bg-card p-3">
           <div className="flex items-center justify-between gap-2">
             <div>
-              <p className="text-sm font-bold text-steel-900">Product photos</p>
-              <p className="text-[11px] text-steel-500">
+              <p className="text-sm font-bold text-foreground">Product photos</p>
+              <p className="text-[11px] text-muted-foreground">
                 At least {MIN_IMAGES} images required · first is the main photo
                 ({filledImages.length}/{Math.max(MIN_IMAGES, images.length)})
               </p>
@@ -433,21 +456,21 @@ export function SellerSalesPage() {
         {sales.map((s) => (
           <li
             key={s.id}
-            className="rounded-2xl border border-steel-200 bg-white p-4"
+            className="rounded-2xl border border-border bg-card p-4"
           >
             <div className="flex justify-between">
               <p className="font-semibold">{s.title}</p>
-              <p className="font-bold text-bolt-800">
+              <p className="font-bold text-bolt-800 dark:text-bolt-200">
                 {formatTZS(s.lineTotal)}
               </p>
             </div>
-            <p className="text-xs text-steel-500">
+            <p className="text-xs text-muted-foreground">
               {s.order.orderNumber} · {s.order.status} · ×{s.quantity}
             </p>
           </li>
         ))}
         {!sales.length && (
-          <p className="text-center text-sm text-steel-500 py-8">No sales yet</p>
+          <p className="text-center text-sm text-muted-foreground py-8">No sales yet</p>
         )}
       </ul>
     </div>

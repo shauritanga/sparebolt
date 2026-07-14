@@ -7,11 +7,14 @@ import {
   User,
   Bolt,
   Bell,
+  Moon,
+  Sun,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useCartStore } from '@/stores/cart-store';
 import { useAuthStore } from '@/stores/auth-store';
 import { cn } from '@/lib/utils';
+import { useTheme } from '@/hooks/use-theme';
 import { useEffect, useState } from 'react';
 
 export function AppShell() {
@@ -20,6 +23,7 @@ export function AppShell() {
   const user = useAuthStore((s) => s.user);
   const refreshMe = useAuthStore((s) => s.refreshMe);
   const location = useLocation();
+  const { isDark, toggleTheme } = useTheme();
   const [offline, setOffline] = useState(!navigator.onLine);
 
   useEffect(() => {
@@ -34,11 +38,14 @@ export function AppShell() {
     };
   }, [refreshMe]);
 
-  // Hide bottom nav on auth, checkout, and product detail (mobile action bar)
+  const isAdmin = location.pathname.startsWith('/admin');
+
+  // Hide bottom nav on auth, checkout, product detail, and admin console
   const hideNav =
     location.pathname.startsWith('/auth') ||
     location.pathname.startsWith('/checkout') ||
-    location.pathname.startsWith('/parts/');
+    location.pathname.startsWith('/parts/') ||
+    isAdmin;
 
   const toggleLang = () => {
     const next = i18n.language === 'en' ? 'sw' : 'en';
@@ -54,32 +61,58 @@ export function AppShell() {
     { to: '/account', icon: User, label: t('account') },
   ];
 
+  // Admin console uses its own full-width shell (no consumer chrome)
+  if (isAdmin) {
+    return (
+      <div className="min-h-dvh bg-background">
+        {offline && (
+          <div className="bg-amber-100 px-4 py-1.5 text-center text-xs font-medium text-amber-900 dark:bg-amber-950 dark:text-amber-200">
+            {t('offline')}
+          </div>
+        )}
+        <Outlet />
+      </div>
+    );
+  }
+
   return (
-    <div className="mx-auto flex min-h-dvh max-w-lg flex-col bg-surface md:max-w-none">
-      <header className="sticky top-0 z-40 border-b border-steel-200/80 bg-white/95 backdrop-blur-md safe-pt">
+    <div className="mx-auto flex min-h-dvh max-w-lg flex-col bg-background md:max-w-none">
+      <header className="sticky top-0 z-40 border-b border-border bg-card/95 backdrop-blur-md safe-pt">
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-3 px-4">
           <Link to="/" className="flex items-center gap-2">
             <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-bolt-700 text-white shadow-sm">
               <Bolt className="h-5 w-5 fill-current" />
             </span>
-            <span className="font-display text-lg font-extrabold tracking-tight text-steel-900">
-              Spare<span className="text-bolt-700">Bolt</span>
+            <span className="font-display text-lg font-extrabold tracking-tight text-foreground">
+              Spare<span className="text-bolt-500">Bolt</span>
             </span>
           </Link>
 
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-0.5">
             <button
               type="button"
               onClick={toggleLang}
-              className="rounded-lg px-2.5 py-1.5 text-xs font-bold uppercase text-steel-600 hover:bg-steel-100 cursor-pointer min-h-[44px]"
+              className="rounded-lg px-2.5 py-1.5 text-xs font-bold uppercase text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer min-h-[44px]"
               aria-label={t('language')}
             >
               {i18n.language === 'en' ? 'SW' : 'EN'}
             </button>
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="rounded-xl p-2.5 text-muted-foreground hover:bg-muted hover:text-foreground min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer"
+              aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+            >
+              {isDark ? (
+                <Sun className="h-5 w-5" />
+              ) : (
+                <Moon className="h-5 w-5" />
+              )}
+            </button>
             {user && (
               <Link
                 to="/notifications"
-                className="relative rounded-xl p-2.5 text-steel-600 hover:bg-steel-100 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                className="relative rounded-xl p-2.5 text-muted-foreground hover:bg-muted hover:text-foreground min-h-[44px] min-w-[44px] flex items-center justify-center"
                 aria-label={t('notifications')}
               >
                 <Bell className="h-5 w-5" />
@@ -87,7 +120,7 @@ export function AppShell() {
             )}
             <Link
               to="/cart"
-              className="relative rounded-xl p-2.5 text-steel-600 hover:bg-steel-100 min-h-[44px] min-w-[44px] flex items-center justify-center md:hidden"
+              className="relative rounded-xl p-2.5 text-muted-foreground hover:bg-muted hover:text-foreground min-h-[44px] min-w-[44px] flex items-center justify-center md:hidden"
               aria-label={t('cart')}
             >
               <ShoppingCart className="h-5 w-5" />
@@ -100,7 +133,7 @@ export function AppShell() {
           </div>
         </div>
         {offline && (
-          <div className="bg-amber-100 px-4 py-1.5 text-center text-xs font-medium text-amber-900">
+          <div className="bg-amber-100 px-4 py-1.5 text-center text-xs font-medium text-amber-900 dark:bg-amber-950 dark:text-amber-200">
             {t('offline')}
           </div>
         )}
@@ -116,7 +149,7 @@ export function AppShell() {
       </main>
 
       {!hideNav && (
-        <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-steel-200 bg-white/95 backdrop-blur-md safe-pb md:hidden">
+        <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-card/95 backdrop-blur-md safe-pb md:hidden">
           <ul className="mx-auto flex max-w-lg items-stretch justify-around px-1 pt-1">
             {nav.map(({ to, icon: Icon, label, badge }) => (
               <li key={to} className="flex-1">
@@ -126,7 +159,9 @@ export function AppShell() {
                   className={({ isActive }) =>
                     cn(
                       'flex flex-col items-center gap-0.5 py-2 text-[10px] font-semibold transition-colors min-h-[52px]',
-                      isActive ? 'text-bolt-700' : 'text-steel-400',
+                      isActive
+                        ? 'text-bolt-600 dark:text-bolt-400'
+                        : 'text-muted-foreground',
                     )
                   }
                 >

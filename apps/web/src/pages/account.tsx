@@ -20,9 +20,9 @@ export function AccountPage() {
   if (!user) {
     return (
       <div className="mx-auto max-w-md space-y-4 py-12 text-center">
-        <User className="mx-auto h-12 w-12 text-steel-300" />
+        <User className="mx-auto h-12 w-12 text-muted-foreground" />
         <h1 className="font-display text-xl font-bold">{t('account')}</h1>
-        <p className="text-sm text-steel-500">
+        <p className="text-sm text-muted-foreground">
           Log in to track orders, sell parts, or deliver.
         </p>
         <div className="flex justify-center gap-2">
@@ -70,7 +70,7 @@ export function AccountPage() {
 
   return (
     <div className="mx-auto max-w-md space-y-5">
-      <div className="rounded-3xl border border-steel-200 bg-gradient-to-br from-bolt-800 to-steel-900 p-5 text-white shadow-md">
+      <div className="rounded-3xl border border-border bg-gradient-to-br from-bolt-800 to-steel-900 p-5 text-white shadow-md">
         <p className="text-xs font-bold uppercase tracking-wider text-bolt-200">
           {user.role}
         </p>
@@ -81,16 +81,16 @@ export function AccountPage() {
       </div>
 
       {user.sellerProfile?.status === 'PENDING' && (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
           <p className="font-bold">Seller verification pending</p>
-          <p className="mt-1 text-amber-900/80">
+          <p className="mt-1 text-amber-900/80 dark:text-amber-200/80">
             Your documents are under review. You cannot list parts until an
             admin approves your application.
           </p>
         </div>
       )}
       {user.sellerProfile?.status === 'REJECTED' && (
-        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-900">
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-900 dark:border-red-800 dark:bg-red-950/40 dark:text-red-100">
           <p className="font-bold">Seller application rejected</p>
           <p className="mt-1">
             {user.sellerProfile.rejectionReason ||
@@ -99,16 +99,16 @@ export function AccountPage() {
         </div>
       )}
       {user.driverProfile?.status === 'PENDING' && (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
           <p className="font-bold">Driver verification pending</p>
-          <p className="mt-1 text-amber-900/80">
+          <p className="mt-1 text-amber-900/80 dark:text-amber-200/80">
             Your documents are under review. You cannot accept jobs until an
             admin approves your application.
           </p>
         </div>
       )}
       {user.driverProfile?.status === 'REJECTED' && (
-        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-900">
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-900 dark:border-red-800 dark:bg-red-950/40 dark:text-red-100">
           <p className="font-bold">Driver application rejected</p>
           <p className="mt-1">
             {user.driverProfile.rejectionReason ||
@@ -117,16 +117,16 @@ export function AccountPage() {
         </div>
       )}
 
-      <ul className="overflow-hidden rounded-2xl border border-steel-200 bg-white shadow-sm">
+      <ul className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
         {links.map(({ to, icon: Icon, label }) => (
-          <li key={to} className="border-b border-steel-100 last:border-0">
+          <li key={to} className="border-b border-border last:border-0">
             <Link
               to={to}
-              className="flex min-h-[52px] items-center gap-3 px-4 py-3.5 transition hover:bg-steel-50"
+              className="flex min-h-[52px] items-center gap-3 px-4 py-3.5 transition hover:bg-muted"
             >
-              <Icon className="h-5 w-5 text-bolt-700" />
-              <span className="flex-1 font-semibold text-steel-800">{label}</span>
-              <ChevronRight className="h-4 w-4 text-steel-400" />
+              <Icon className="h-5 w-5 text-bolt-700 dark:text-bolt-300" />
+              <span className="flex-1 font-semibold text-foreground">{label}</span>
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
             </Link>
           </li>
         ))}
