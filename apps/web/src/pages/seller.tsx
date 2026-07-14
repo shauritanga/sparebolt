@@ -36,7 +36,7 @@ export function SellerDashboardPage() {
     return (
       <div className="mx-auto max-w-lg space-y-4 py-8 text-center">
         <h1 className="font-display text-2xl font-extrabold">Seller</h1>
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-left">
+        <div className="panel-warning p-6 text-left">
           <Badge variant="warning">{sellerProfile.status}</Badge>
           <p className="mt-3 font-semibold text-foreground">
             {sellerProfile.status === 'PENDING'
@@ -108,8 +108,8 @@ export function SellerDashboardPage() {
       </div>
 
       {data.lowStock?.length > 0 && (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-          <p className="font-semibold text-amber-900">Low stock</p>
+        <div className="panel-warning p-4">
+          <p className="font-semibold text-warning-soft-foreground">Low stock</p>
           <ul className="mt-2 space-y-1 text-sm">
             {data.lowStock.map((l) => (
               <li key={l.id}>
@@ -271,7 +271,7 @@ export function NewListingPage() {
       <h1 className="font-display text-2xl font-extrabold">New listing</h1>
       <form onSubmit={(e) => void submit(e)} className="space-y-3">
         <select
-          className="h-12 w-full rounded-xl border border-border px-3"
+          className="field-control"
           value={form.categoryId}
           onChange={(e) => setForm((f) => ({ ...f, categoryId: e.target.value }))}
         >
@@ -288,7 +288,7 @@ export function NewListingPage() {
           onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
         />
         <textarea
-          className="min-h-24 w-full rounded-xl border border-border p-3 text-base"
+          className="field-control"
           placeholder="Description"
           required
           minLength={10}
@@ -328,7 +328,7 @@ export function NewListingPage() {
           }
         />
         <select
-          className="h-12 w-full rounded-xl border border-border px-3"
+          className="field-control"
           value={form.condition}
           onChange={(e) =>
             setForm((f) => ({ ...f, condition: e.target.value }))

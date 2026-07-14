@@ -278,8 +278,8 @@ export function BecomeDriverPage() {
               <div
                 className={cn(
                   'flex flex-col items-center gap-1 rounded-xl border px-1 py-2 text-center',
-                  active && 'border-bolt-600 bg-bolt-50 dark:bg-bolt-950/50',
-                  done && 'border-bolt-200 bg-bolt-50 dark:bg-bolt-950/50/50 dark:bg-bolt-950/40',
+                  active && 'border-bolt-600 bg-accent-soft',
+                  done && 'border-accent-border bg-accent-soft/60',
                   !active && !done && 'border-border bg-card',
                 )}
               >
@@ -373,7 +373,7 @@ export function BecomeDriverPage() {
             <p className="text-sm font-bold text-foreground">Vehicle & licence</p>
             <Field label="Vehicle type" required>
               <select
-                className="h-12 w-full rounded-xl border border-border px-3 text-base"
+                className="field-control"
                 value={form.vehicleType}
                 onChange={(e) => set('vehicleType', e.target.value)}
               >
@@ -483,7 +483,7 @@ export function BecomeDriverPage() {
             </p>
             <Field label="Payout method" required>
               <select
-                className="h-12 w-full rounded-xl border border-border px-3 text-base"
+                className="field-control"
                 value={form.payoutMethod}
                 onChange={(e) => set('payoutMethod', e.target.value)}
               >
@@ -583,8 +583,8 @@ export function BecomeDriverPage() {
               />
             </Field>
 
-            <div className="space-y-3 rounded-xl border border-bolt-100 dark:border-bolt-800 bg-bolt-50 dark:bg-bolt-950/50 p-3">
-              <p className="flex items-center gap-2 text-sm font-bold text-bolt-900 dark:text-bolt-100">
+            <div className="space-y-3 rounded-xl border border-accent-border bg-accent-soft p-3">
+              <p className="flex items-center gap-2 text-sm font-bold text-accent-soft-foreground">
                 <Shield className="h-4 w-4" /> Legal consents
               </p>
               {(

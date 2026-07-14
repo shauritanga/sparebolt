@@ -77,7 +77,7 @@ export function ImageUploadField({
           disabled={uploading}
           onClick={() => inputRef.current?.click()}
           className={cn(
-            'flex min-h-[88px] min-w-[88px] flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-border bg-muted px-2 text-muted-foreground transition hover:border-bolt-400 hover:bg-bolt-50 dark:hover:bg-bolt-950/50 cursor-pointer',
+            'flex min-h-[88px] min-w-[88px] flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-border bg-muted px-2 text-muted-foreground transition hover:border-bolt-400 hover:bg-accent-soft cursor-pointer',
             value && 'border-solid border-border p-0 overflow-hidden',
             uploading && 'opacity-70 pointer-events-none',
           )}

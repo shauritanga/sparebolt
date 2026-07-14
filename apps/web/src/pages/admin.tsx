@@ -473,7 +473,7 @@ export function AdminPage() {
                         className={cn(
                           'admin-badge-pop flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold',
                           active
-                            ? 'bg-white text-bolt-800'
+                            ? 'bg-card text-bolt-800 dark:text-bolt-200'
                             : 'bg-amber-signal text-steel-950',
                         )}
                       >
@@ -768,7 +768,7 @@ export function AdminPage() {
               Add a short reason (shown to the applicant).
             </p>
             <textarea
-              className="mt-3 min-h-24 w-full rounded-xl border border-border p-3 text-sm"
+              className="field-control mt-3 text-sm"
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
               placeholder="Documents incomplete, ID mismatch…"
@@ -825,13 +825,13 @@ function Overview({
       label: 'Users',
       value: stats.users,
       icon: Users,
-      tone: 'bg-sky-50 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300',
+      tone: 'bg-info-soft text-info-soft-foreground',
     },
     {
       label: 'Approved sellers',
       value: stats.sellers,
       icon: Store,
-      tone: 'bg-bolt-50 dark:bg-bolt-950/50 text-bolt-800 dark:text-bolt-200',
+      tone: 'bg-accent-soft text-accent-soft-foreground',
       sub: stats.pendingSellers
         ? `${stats.pendingSellers} pending`
         : undefined,
@@ -841,7 +841,7 @@ function Overview({
       label: 'Approved drivers',
       value: stats.drivers,
       icon: Truck,
-      tone: 'bg-violet-50 text-violet-700 dark:bg-violet-950/50 dark:text-violet-300',
+      tone: 'bg-violet-soft text-violet-soft-foreground',
       sub: stats.pendingDrivers
         ? `${stats.pendingDrivers} pending`
         : undefined,
@@ -851,7 +851,7 @@ function Overview({
       label: 'Active listings',
       value: stats.listings,
       icon: Package,
-      tone: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300',
+      tone: 'bg-success-soft text-success-soft-foreground',
     },
     {
       label: 'Orders',
@@ -863,7 +863,7 @@ function Overview({
       label: 'Escrow held',
       value: formatTZS(stats.escrowHeld),
       icon: Wallet,
-      tone: 'bg-amber-50 text-amber-800 dark:bg-amber-950/50 dark:text-amber-200',
+      tone: 'bg-warning-soft text-warning-soft-foreground',
       sub: `${stats.escrowCount} open`,
       onClick: () => onJump('escrows'),
     },
@@ -871,7 +871,7 @@ function Overview({
       label: 'Open disputes',
       value: stats.openDisputes,
       icon: AlertTriangle,
-      tone: 'bg-red-50 text-red-700 dark:bg-red-950/50 dark:text-red-300',
+      tone: 'bg-danger-soft text-danger-soft-foreground',
       onClick: () => onJump('disputes'),
     },
     {
@@ -1134,7 +1134,7 @@ function AppQueueKpis({
           ? `${agingPending} waiting 3d+`
           : 'In verification queue',
       icon: Clock,
-      tone: 'bg-amber-50 text-amber-800 dark:bg-amber-950/50 dark:text-amber-200',
+      tone: 'bg-warning-soft text-warning-soft-foreground',
       accent: 'border-l-amber-signal',
     },
     {
@@ -1142,7 +1142,7 @@ function AppQueueKpis({
       value: counts.APPROVED,
       sub: `Active ${label}`,
       icon: BadgeCheck,
-      tone: 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200',
+      tone: 'bg-success-soft text-success-soft-foreground',
       accent: 'border-l-emerald-500',
     },
     {
@@ -1150,7 +1150,7 @@ function AppQueueKpis({
       value: counts.REJECTED,
       sub: 'Need re-application',
       icon: UserX,
-      tone: 'bg-red-50 text-red-800 dark:bg-red-950/50 dark:text-red-200',
+      tone: 'bg-danger-soft text-danger-soft-foreground',
       accent: 'border-l-red-500',
     },
     {
@@ -1158,7 +1158,7 @@ function AppQueueKpis({
       value: counts.SUSPENDED,
       sub: 'Restricted access',
       icon: Shield,
-      tone: 'bg-violet-50 text-violet-800 dark:bg-violet-950/50 dark:text-violet-200',
+      tone: 'bg-violet-soft text-violet-soft-foreground',
       accent: 'border-l-violet-500',
     },
   ];
@@ -1341,14 +1341,14 @@ function SellersPanel({
       />
 
       {agingPending > 0 && (
-        <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
+        <div className="flex items-start gap-3 panel-warning px-4 py-3 text-sm">
           <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-signal" />
           <div>
             <p className="font-bold">
               {agingPending} pending seller
               {agingPending === 1 ? '' : 's'} waiting 3+ days
             </p>
-            <p className="mt-0.5 text-amber-900/80 dark:text-amber-200/80">
+            <p className="mt-0.5 opacity-80">
               Faster KYC review keeps inventory flowing onto the marketplace.
             </p>
           </div>
@@ -1619,14 +1619,14 @@ function DriversPanel({
       />
 
       {agingPending > 0 && (
-        <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
+        <div className="flex items-start gap-3 panel-warning px-4 py-3 text-sm">
           <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-signal" />
           <div>
             <p className="font-bold">
               {agingPending} pending driver
               {agingPending === 1 ? '' : 's'} waiting 3+ days
             </p>
-            <p className="mt-0.5 text-amber-900/80 dark:text-amber-200/80">
+            <p className="mt-0.5 opacity-80">
               Approving qualified drivers shortens delivery ETAs for buyers.
             </p>
           </div>
@@ -2011,7 +2011,7 @@ function ReviewDrawer({
           </section>
 
           {d.rejectionReason && (
-            <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-900 dark:border-red-800 dark:bg-red-950/40 dark:text-red-100">
+            <div className="panel-danger p-4 text-sm">
               <p className="font-bold">Rejection reason</p>
               <p className="mt-1 whitespace-pre-wrap">{d.rejectionReason}</p>
             </div>
@@ -2188,7 +2188,7 @@ function UserPopupMenu({
       <button
         type="button"
         role="menuitem"
-        className={cn(itemCls, 'text-danger hover:bg-red-50 dark:hover:bg-red-950/40')}
+        className={cn(itemCls, 'text-danger hover:bg-danger-soft')}
         onClick={() => {
           onClose();
           onLogout();
@@ -2290,9 +2290,9 @@ function AgingBadge({ days, status }: { days: number; status: string }) {
   }
   const tone =
     days >= 7
-      ? 'text-danger bg-red-50 dark:bg-red-950/40'
+      ? 'text-danger bg-danger-soft'
       : days >= 3
-        ? 'text-amber-800 bg-amber-50 dark:text-amber-200 dark:bg-amber-950/40'
+        ? 'text-warning-soft-foreground bg-warning-soft'
         : 'text-muted-foreground bg-muted';
   return (
     <span
@@ -2438,7 +2438,7 @@ function EscrowPanel({ escrows }: { escrows: EscrowRow[] }) {
       value: formatTZS(summary.held),
       sub: `${summary.heldCount} open escrow${summary.heldCount === 1 ? '' : 's'}`,
       icon: Wallet,
-      tone: 'bg-amber-50 text-amber-800 dark:bg-amber-950/50 dark:text-amber-200',
+      tone: 'bg-warning-soft text-warning-soft-foreground',
       accent: 'border-l-amber-signal',
     },
     {
@@ -2446,7 +2446,7 @@ function EscrowPanel({ escrows }: { escrows: EscrowRow[] }) {
       value: formatTZS(summary.released),
       sub: `${summary.releasedCount} settled`,
       icon: ArrowUpRight,
-      tone: 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200',
+      tone: 'bg-success-soft text-success-soft-foreground',
       accent: 'border-l-emerald-500',
     },
     {
@@ -2454,7 +2454,7 @@ function EscrowPanel({ escrows }: { escrows: EscrowRow[] }) {
       value: formatTZS(summary.refunded),
       sub: `${summary.refundedCount} refund${summary.refundedCount === 1 ? '' : 's'}`,
       icon: ArrowDownLeft,
-      tone: 'bg-sky-50 text-sky-800 dark:bg-sky-950/50 dark:text-sky-200',
+      tone: 'bg-info-soft text-info-soft-foreground',
       accent: 'border-l-sky-500',
     },
     {
@@ -2465,7 +2465,7 @@ function EscrowPanel({ escrows }: { escrows: EscrowRow[] }) {
           ? `${summary.agingCount} aging 7d+`
           : 'Across ledger',
       icon: Percent,
-      tone: 'bg-bolt-50 text-bolt-800 dark:bg-bolt-950/50 dark:text-bolt-200',
+      tone: 'bg-accent-soft text-accent-soft-foreground',
       accent: 'border-l-bolt-600',
     },
   ];
@@ -2537,14 +2537,14 @@ function EscrowPanel({ escrows }: { escrows: EscrowRow[] }) {
 
       {/* Aging alert */}
       {summary.agingCount > 0 && (
-        <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
+        <div className="flex items-start gap-3 panel-warning px-4 py-3 text-sm">
           <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-signal" />
           <div>
             <p className="font-bold">
               {summary.agingCount} held escrow
               {summary.agingCount === 1 ? '' : 's'} older than 7 days
             </p>
-            <p className="mt-0.5 text-amber-900/80 dark:text-amber-200/80">
+            <p className="mt-0.5 opacity-80">
               Review delivery status or open disputes — delayed releases hurt
               seller cash flow and buyer trust.
             </p>
@@ -2903,14 +2903,14 @@ function EscrowDetailDrawer({
                 </div>
               </div>
               {escrow.order.dispute && (
-                <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-3 dark:border-red-800 dark:bg-red-950/40">
+                <div className="flex items-start gap-3 panel-danger p-3">
                   <Scale className="mt-0.5 h-4 w-4 shrink-0 text-danger" />
                   <div>
-                    <p className="text-xs font-bold text-red-900 dark:text-red-200">
+                    <p className="text-xs font-bold">
                       Open dispute · {escrow.order.dispute.status}
                     </p>
                     {escrow.order.dispute.reason && (
-                      <p className="mt-0.5 text-xs text-red-800/80 dark:text-red-200/80">
+                      <p className="mt-0.5 text-xs opacity-80">
                         {escrow.order.dispute.reason}
                       </p>
                     )}

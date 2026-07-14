@@ -43,7 +43,7 @@ export function NotificationsPage() {
             className={`rounded-2xl border p-4 ${
               n.read
                 ? 'border-border bg-card'
-                : 'border-bolt-200 bg-bolt-50 dark:bg-bolt-950/50'
+                : 'border-accent-border bg-accent-soft'
             }`}
           >
             <p className="font-semibold text-foreground">{n.title}</p>

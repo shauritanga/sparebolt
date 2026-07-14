@@ -150,7 +150,7 @@ export function HomePage() {
       </section>
 
       {/* Trust */}
-      <section className="rounded-3xl border border-bolt-200 bg-gradient-to-br from-bolt-50 to-white p-6 shadow-sm">
+      <section className="rounded-3xl border border-accent-border bg-gradient-to-br from-accent-soft to-card p-6 shadow-sm">
         <div className="flex items-start gap-3">
           <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-bolt-700 text-white">
             <ShieldCheck className="h-6 w-6" />
@@ -173,7 +173,7 @@ export function HomePage() {
               key={label}
               className="flex flex-col items-center gap-2 rounded-2xl bg-card p-4 text-center shadow-sm ring-1 ring-border"
             >
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-bolt-100 text-bolt-800 dark:text-bolt-200">
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-accent-soft text-accent-soft-foreground">
                 <Icon className="h-4 w-4" />
               </span>
               <span className="text-[11px] font-bold text-muted-foreground">
@@ -191,7 +191,7 @@ export function HomePage() {
       <section className="grid gap-3 sm:grid-cols-2">
         <Link
           to="/account/become-seller"
-          className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm transition hover:border-bolt-300"
+          className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm transition hover:border-bolt-300 dark:hover:border-bolt-600"
         >
           <Package className="h-8 w-8 text-bolt-700 dark:text-bolt-300" />
           <div>
@@ -203,7 +203,7 @@ export function HomePage() {
         </Link>
         <Link
           to="/seller/promos"
-          className="flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-sm transition hover:border-amber-400"
+          className="flex items-center gap-3 rounded-2xl border border-warning-border bg-warning-soft p-4 shadow-sm transition hover:opacity-90"
         >
           <MegaphoneIcon />
           <div>
@@ -223,7 +223,7 @@ export function HomePage() {
 function MegaphoneIcon() {
   return (
     <svg
-      className="h-8 w-8 text-amber-700"
+      className="h-8 w-8 text-warning-soft-foreground"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"

@@ -328,7 +328,7 @@ export function BrowsePage() {
             <button
               key={k}
               type="button"
-              className="inline-flex items-center gap-1 rounded-full bg-bolt-50 dark:bg-bolt-950/50 px-2.5 py-1 text-[11px] font-semibold text-bolt-800 dark:text-bolt-200 ring-1 ring-bolt-200 dark:ring-bolt-800 cursor-pointer"
+              className="inline-flex items-center gap-1 rounded-full bg-accent-soft px-2.5 py-1 text-[11px] font-semibold text-accent-soft-foreground ring-1 ring-accent-border cursor-pointer"
               onClick={() => {
                 const next = new URLSearchParams(params);
                 next.delete(k);
@@ -373,7 +373,7 @@ export function BrowsePage() {
             style={{ animation: 'sheet-up 0.28s ease-out' }}
           >
             <div className="flex shrink-0 flex-col items-center pt-2 pb-1">
-              <span className="h-1 w-10 rounded-full bg-steel-300" aria-hidden />
+              <span className="h-1 w-10 rounded-full bg-border" aria-hidden />
             </div>
 
             <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-4 pb-3">
@@ -418,7 +418,7 @@ export function BrowsePage() {
                           model: '',
                         }))
                       }
-                      className="flex h-12 w-full rounded-xl border border-border bg-card px-3 text-base"
+                      className="field-control"
                     >
                       <option value="">Any make</option>
                       {makes.map((m) => (
@@ -448,7 +448,7 @@ export function BrowsePage() {
                         onChange={(e) =>
                           setDraft((d) => ({ ...d, model: e.target.value }))
                         }
-                        className="flex h-12 w-full rounded-xl border border-border bg-card px-3 text-base"
+                        className="field-control"
                       >
                         <option value="">Any model</option>
                         {modelsForMake.map((m) => (
@@ -476,7 +476,7 @@ export function BrowsePage() {
                       onChange={(e) =>
                         setDraft((d) => ({ ...d, year: e.target.value }))
                       }
-                      className="flex h-12 w-full rounded-xl border border-border bg-card px-3 text-base"
+                      className="field-control"
                     >
                       <option value="">Any year</option>
                       {yearOptions.map((y) => (
@@ -508,7 +508,7 @@ export function BrowsePage() {
                           categoryId: e.target.value,
                         }))
                       }
-                      className="flex h-12 w-full rounded-xl border border-border bg-card px-3 text-base"
+                      className="field-control"
                     >
                       <option value="">Any category</option>
                       {categories.map((c) => (
@@ -538,7 +538,7 @@ export function BrowsePage() {
                           className={cn(
                             'rounded-xl border px-3 py-2.5 text-sm font-semibold cursor-pointer min-h-[44px]',
                             draft.condition === opt.v
-                              ? 'border-bolt-600 bg-bolt-50 dark:bg-bolt-950/50 text-bolt-800 dark:text-bolt-200'
+                              ? 'border-bolt-600 bg-accent-soft text-accent-soft-foreground'
                               : 'border-border bg-card text-muted-foreground',
                           )}
                         >
@@ -556,7 +556,7 @@ export function BrowsePage() {
                       onChange={(e) =>
                         setDraft((d) => ({ ...d, partType: e.target.value }))
                       }
-                      className="flex h-12 w-full rounded-xl border border-border bg-card px-3 text-base"
+                      className="field-control"
                     >
                       <option value="">Any type</option>
                       <option value="Genuine">Genuine</option>

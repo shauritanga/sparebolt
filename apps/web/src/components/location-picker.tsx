@@ -302,7 +302,7 @@ export function LocationPicker({
             style={{ animation: 'loc-sheet-up 0.26s ease-out' }}
           >
             <div className="flex shrink-0 flex-col items-center pt-2 pb-1">
-              <span className="h-1 w-10 rounded-full bg-steel-300" aria-hidden />
+              <span className="h-1 w-10 rounded-full bg-border" aria-hidden />
             </div>
 
             <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border px-4 pb-3">
@@ -374,7 +374,7 @@ export function LocationPicker({
                         className={cn(
                           'flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left text-sm transition cursor-pointer min-h-[48px]',
                           selected
-                            ? 'bg-bolt-50 dark:bg-bolt-950/50 font-semibold text-bolt-900 dark:text-bolt-100'
+                            ? 'bg-accent-soft font-semibold text-bolt-900 dark:text-bolt-100'
                             : 'text-foreground hover:bg-muted active:bg-muted',
                         )}
                       >

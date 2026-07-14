@@ -50,6 +50,25 @@
   --color-popover-foreground: #0f172a;
   --color-ring: #0d9488;
 
+  /* Soft brand / accent panels (theme-aware) */
+  --color-accent-soft: #f0fdfa;
+  --color-accent-soft-foreground: #134e4a;
+  --color-accent-border: #99f6e4;
+  --color-warning-soft: #fffbeb;
+  --color-warning-soft-foreground: #78350f;
+  --color-warning-border: #fcd34d;
+  --color-danger-soft: #fef2f2;
+  --color-danger-soft-foreground: #7f1d1d;
+  --color-danger-border: #fecaca;
+  --color-success-soft: #ecfdf5;
+  --color-success-soft-foreground: #065f46;
+  --color-info-soft: #f0f9ff;
+  --color-info-soft-foreground: #075985;
+  --color-violet-soft: #f5f3ff;
+  --color-violet-soft-foreground: #5b21b6;
+  --color-orange-soft: #fff7ed;
+  --color-orange-soft-foreground: #9a3412;
+
   /* Admin sidebar (always deep navy) */
   --color-sidebar: #0f172a;
   --color-sidebar-foreground: #f1f5f9;
@@ -77,6 +96,24 @@ html.dark {
   --color-popover-foreground: #f1f5f9;
   --color-ring: #2dd4bf;
 
+  --color-accent-soft: rgba(15, 118, 110, 0.18);
+  --color-accent-soft-foreground: #99f6e4;
+  --color-accent-border: rgba(45, 212, 191, 0.28);
+  --color-warning-soft: rgba(245, 158, 11, 0.14);
+  --color-warning-soft-foreground: #fde68a;
+  --color-warning-border: rgba(245, 158, 11, 0.35);
+  --color-danger-soft: rgba(220, 38, 38, 0.16);
+  --color-danger-soft-foreground: #fecaca;
+  --color-danger-border: rgba(248, 113, 113, 0.35);
+  --color-success-soft: rgba(22, 163, 74, 0.16);
+  --color-success-soft-foreground: #86efac;
+  --color-info-soft: rgba(14, 165, 233, 0.16);
+  --color-info-soft-foreground: #7dd3fc;
+  --color-violet-soft: rgba(139, 92, 246, 0.16);
+  --color-violet-soft-foreground: #c4b5fd;
+  --color-orange-soft: rgba(249, 115, 22, 0.16);
+  --color-orange-soft-foreground: #fdba74;
+
   --color-sidebar: #020617;
   --color-sidebar-foreground: #f8fafc;
   --color-sidebar-muted: #94a3b8;
@@ -100,6 +137,10 @@ html.dark {
   body {
     @apply bg-background font-sans text-foreground antialiased;
     min-height: 100dvh;
+    /* Smooth theme flips for surfaces (respect reduced-motion below) */
+    transition:
+      background-color 0.2s ease,
+      color 0.2s ease;
   }
 
   h1,
@@ -113,13 +154,43 @@ html.dark {
   input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']),
   select,
   textarea {
-    @apply bg-card text-foreground;
+    @apply bg-card text-foreground border-border;
     color-scheme: inherit;
   }
 
   input::placeholder,
   textarea::placeholder {
     @apply text-muted-foreground;
+  }
+
+  /* Dropdown options (desktop) */
+  select option,
+  select optgroup {
+    background-color: var(--color-card);
+    color: var(--color-foreground);
+  }
+
+  /* Browser autofill should not force pure white / black */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  textarea:-webkit-autofill,
+  select:-webkit-autofill {
+    -webkit-text-fill-color: var(--color-foreground);
+    caret-color: var(--color-foreground);
+    box-shadow: 0 0 0 1000px var(--color-card) inset;
+    transition: background-color 99999s ease-in-out 0s;
+  }
+
+  /* Selection highlight */
+  ::selection {
+    background-color: color-mix(in oklab, var(--color-bolt-500) 35%, transparent);
+    color: var(--color-foreground);
+  }
+
+  /* Scrollbars (Firefox + Chromium) */
+  * {
+    scrollbar-color: var(--color-border) transparent;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -130,6 +201,33 @@ html.dark {
       animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;
     }
+  }
+}
+
+@layer components {
+  /* Shared native control look for selects / textareas without the Input component */
+  .field-control {
+    @apply flex h-12 w-full rounded-xl border border-border bg-card px-3 text-base text-foreground shadow-sm transition-colors;
+    @apply placeholder:text-muted-foreground;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-bolt-500;
+    @apply disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  textarea.field-control {
+    @apply h-auto min-h-24 py-3;
+  }
+
+  /* Soft alert / callout panels */
+  .panel-accent {
+    @apply rounded-2xl border border-accent-border bg-accent-soft text-accent-soft-foreground;
+  }
+
+  .panel-warning {
+    @apply rounded-2xl border border-warning-border bg-warning-soft text-warning-soft-foreground;
+  }
+
+  .panel-danger {
+    @apply rounded-2xl border border-danger-border bg-danger-soft text-danger-soft-foreground;
   }
 }
 

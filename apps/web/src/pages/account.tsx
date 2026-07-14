@@ -81,36 +81,36 @@ export function AccountPage() {
       </div>
 
       {user.sellerProfile?.status === 'PENDING' && (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
+        <div className="panel-warning p-4 text-sm">
           <p className="font-bold">Seller verification pending</p>
-          <p className="mt-1 text-amber-900/80 dark:text-amber-200/80">
+          <p className="mt-1 opacity-80">
             Your documents are under review. You cannot list parts until an
             admin approves your application.
           </p>
         </div>
       )}
       {user.sellerProfile?.status === 'REJECTED' && (
-        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-900 dark:border-red-800 dark:bg-red-950/40 dark:text-red-100">
+        <div className="panel-danger p-4 text-sm">
           <p className="font-bold">Seller application rejected</p>
-          <p className="mt-1">
+          <p className="mt-1 opacity-80">
             {user.sellerProfile.rejectionReason ||
               'Contact support for details.'}
           </p>
         </div>
       )}
       {user.driverProfile?.status === 'PENDING' && (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
+        <div className="panel-warning p-4 text-sm">
           <p className="font-bold">Driver verification pending</p>
-          <p className="mt-1 text-amber-900/80 dark:text-amber-200/80">
+          <p className="mt-1 opacity-80">
             Your documents are under review. You cannot accept jobs until an
             admin approves your application.
           </p>
         </div>
       )}
       {user.driverProfile?.status === 'REJECTED' && (
-        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-900 dark:border-red-800 dark:bg-red-950/40 dark:text-red-100">
+        <div className="panel-danger p-4 text-sm">
           <p className="font-bold">Driver application rejected</p>
-          <p className="mt-1">
+          <p className="mt-1 opacity-80">
             {user.driverProfile.rejectionReason ||
               'Contact support for details.'}
           </p>

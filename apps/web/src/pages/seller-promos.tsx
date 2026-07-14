@@ -115,7 +115,7 @@ export function SellerPromosPage() {
             onClick={() => setForm((f) => ({ ...f, package: p.package }))}
             className={`rounded-2xl border p-3 text-left cursor-pointer transition ${
               form.package === p.package
-                ? 'border-bolt-600 bg-bolt-50 dark:bg-bolt-950/50 ring-2 ring-bolt-600/30'
+                ? 'border-bolt-600 bg-accent-soft ring-2 ring-bolt-600/30'
                 : 'border-border bg-card'
             }`}
           >
@@ -140,7 +140,7 @@ export function SellerPromosPage() {
             Listing to promote
           </label>
           <select
-            className="h-12 w-full rounded-xl border border-border px-3 text-base"
+            className="field-control"
             value={form.listingId}
             onChange={(e) =>
               setForm((f) => ({ ...f, listingId: e.target.value }))

@@ -66,7 +66,7 @@ export function AppShell() {
     return (
       <div className="min-h-dvh bg-background">
         {offline && (
-          <div className="bg-amber-100 px-4 py-1.5 text-center text-xs font-medium text-amber-900 dark:bg-amber-950 dark:text-amber-200">
+          <div className="bg-warning-soft px-4 py-1.5 text-center text-xs font-medium text-warning-soft-foreground">
             {t('offline')}
           </div>
         )}
@@ -133,7 +133,7 @@ export function AppShell() {
           </div>
         </div>
         {offline && (
-          <div className="bg-amber-100 px-4 py-1.5 text-center text-xs font-medium text-amber-900 dark:bg-amber-950 dark:text-amber-200">
+          <div className="bg-warning-soft px-4 py-1.5 text-center text-xs font-medium text-warning-soft-foreground">
             {t('offline')}
           </div>
         )}

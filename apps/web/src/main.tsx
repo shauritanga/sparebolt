@@ -5,14 +5,15 @@ import './index.css';
 import App from './App.tsx';
 import { registerSW } from 'virtual:pwa-register';
 
-// Restore theme before paint flicker
+// Restore theme before first paint (avoid light/dark flash)
 const savedTheme = localStorage.getItem('sb_theme');
-if (
-  savedTheme === 'dark' ||
-  (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)
-) {
+const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+const isDark =
+  savedTheme === 'dark' || (!savedTheme && prefersDark);
+if (isDark) {
   document.documentElement.classList.add('dark');
 }
+document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
 
 registerSW({ immediate: true });
 

@@ -257,8 +257,8 @@ export function BecomeSellerPage() {
               <div
                 className={cn(
                   'flex flex-col items-center gap-1 rounded-xl border px-1 py-2 text-center',
-                  active && 'border-bolt-600 bg-bolt-50 dark:bg-bolt-950/50',
-                  done && 'border-bolt-200 bg-bolt-50 dark:bg-bolt-950/50/50 dark:bg-bolt-950/40',
+                  active && 'border-bolt-600 bg-accent-soft',
+                  done && 'border-accent-border bg-accent-soft/60',
                   !active && !done && 'border-border bg-card',
                 )}
               >
@@ -297,7 +297,7 @@ export function BecomeSellerPage() {
             </Field>
             <Field label="Business type" required>
               <select
-                className="h-12 w-full rounded-xl border border-border px-3 text-base"
+                className="field-control"
                 value={form.businessType}
                 onChange={(e) => set('businessType', e.target.value)}
               >
@@ -308,7 +308,7 @@ export function BecomeSellerPage() {
             </Field>
             <Field label="Description">
               <textarea
-                className="min-h-20 w-full rounded-xl border border-border p-3 text-base"
+                className="field-control"
                 placeholder="What parts do you specialise in?"
                 value={form.description}
                 onChange={(e) => set('description', e.target.value)}
@@ -442,7 +442,7 @@ export function BecomeSellerPage() {
             </p>
             <Field label="Payout method" required>
               <select
-                className="h-12 w-full rounded-xl border border-border px-3 text-base"
+                className="field-control"
                 value={form.payoutMethod}
                 onChange={(e) => set('payoutMethod', e.target.value)}
               >
@@ -482,8 +482,8 @@ export function BecomeSellerPage() {
               </>
             )}
 
-            <div className="space-y-3 rounded-xl border border-bolt-100 dark:border-bolt-800 bg-bolt-50 dark:bg-bolt-950/50 p-3">
-              <p className="flex items-center gap-2 text-sm font-bold text-bolt-900 dark:text-bolt-100">
+            <div className="space-y-3 rounded-xl border border-accent-border bg-accent-soft p-3">
+              <p className="flex items-center gap-2 text-sm font-bold text-accent-soft-foreground">
                 <Shield className="h-4 w-4" /> Legal consents
               </p>
               {(

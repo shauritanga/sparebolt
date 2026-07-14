@@ -90,7 +90,7 @@ export function DriverPage() {
     return (
       <div className="mx-auto max-w-lg space-y-4 py-8 text-center">
         <h1 className="font-display text-2xl font-extrabold">Driver</h1>
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-left">
+        <div className="panel-warning p-6 text-left">
           <Badge variant="warning">{driverProfile.status}</Badge>
           <p className="mt-3 font-semibold text-foreground">
             {driverProfile.status === 'PENDING'

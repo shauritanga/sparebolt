@@ -108,7 +108,7 @@ export function CheckoutPage() {
             key={a.id}
             className={`flex cursor-pointer gap-3 rounded-xl border p-3 ${
               addressId === a.id
-                ? 'border-bolt-600 bg-bolt-50 dark:bg-bolt-950/50'
+                ? 'border-bolt-600 bg-accent-soft'
                 : 'border-border'
             }`}
           >
@@ -162,7 +162,7 @@ export function CheckoutPage() {
         />
       </section>
 
-      <div className="flex items-start gap-2 rounded-2xl bg-bolt-50 dark:bg-bolt-950/50 p-4 text-sm text-bolt-900 dark:text-bolt-100">
+      <div className="flex items-start gap-2 rounded-2xl bg-accent-soft p-4 text-sm text-accent-soft-foreground">
         <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0" />
         <p>{t('escrowNote')}</p>
       </div>

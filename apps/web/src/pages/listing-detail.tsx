@@ -175,25 +175,25 @@ export function ListingDetailPage() {
       title: 'Escrow Protected',
       subtitle: 'Your money is safe',
       icon: Shield,
-      wrap: 'bg-emerald-50 text-emerald-600',
+      wrap: 'bg-success-soft text-success-soft-foreground',
     },
     {
       title: 'Secure Payment',
       subtitle: '100% secure checkout',
       icon: Lock,
-      wrap: 'bg-sky-50 text-sky-600',
+      wrap: 'bg-info-soft text-info-soft-foreground',
     },
     {
       title: 'Easy Returns',
       subtitle: `${returnDays}-day return policy`,
       icon: RotateCcw,
-      wrap: 'bg-orange-50 text-orange-600',
+      wrap: 'bg-orange-soft text-orange-soft-foreground',
     },
     {
       title: 'Genuine Parts',
       subtitle: 'Quality assured',
       icon: Award,
-      wrap: 'bg-violet-50 text-violet-600',
+      wrap: 'bg-violet-soft text-violet-soft-foreground',
     },
   ] as const;
 
@@ -355,7 +355,7 @@ export function ListingDetailPage() {
 
               <div className="space-y-0 divide-y divide-border rounded-xl border border-border">
                 <div className="flex items-start gap-3 p-3">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-bolt-50 dark:bg-bolt-950/50 text-bolt-700 dark:text-bolt-300">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent-soft-foreground">
                     <Truck className="h-4 w-4" />
                   </span>
                   <div className="min-w-0">
@@ -371,7 +371,7 @@ export function ListingDetailPage() {
                   </div>
                 </div>
                 <div className="flex items-start gap-3 p-3">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sky-50 text-sky-600">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-info-soft text-info-soft-foreground">
                     <Package className="h-4 w-4" />
                   </span>
                   <div className="min-w-0">
@@ -387,7 +387,7 @@ export function ListingDetailPage() {
                   </div>
                 </div>
                 <div className="flex items-start gap-3 p-3">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-orange-50 text-orange-600">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-orange-soft text-orange-soft-foreground">
                     <RotateCcw className="h-4 w-4" />
                   </span>
                   <div className="min-w-0">
@@ -493,7 +493,7 @@ export function ListingDetailPage() {
         </div>
       )}
 
-      <div className="flex items-start gap-2 rounded-2xl bg-bolt-50 dark:bg-bolt-950/50 p-4 text-sm text-bolt-900 dark:text-bolt-100">
+      <div className="flex items-start gap-2 rounded-2xl bg-accent-soft p-4 text-sm text-accent-soft-foreground">
         <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-bolt-700 dark:text-bolt-300" />
         <p>{t('escrowNote')}</p>
       </div>

@@ -213,7 +213,7 @@ export function OrderDetailPage() {
       </div>
 
       {order.escrow && (
-        <div className="rounded-2xl bg-bolt-50 dark:bg-bolt-950/50 p-4 text-sm text-bolt-900 dark:text-bolt-100">
+        <div className="rounded-2xl bg-accent-soft p-4 text-sm text-accent-soft-foreground">
           Escrow: <strong>{order.escrow.status}</strong> ·{' '}
           {formatTZS(order.escrow.amount)}
         </div>
@@ -242,7 +242,7 @@ export function OrderDetailPage() {
           <select
             value={rating}
             onChange={(e) => setRating(Number(e.target.value))}
-            className="h-12 w-full rounded-xl border border-border px-3"
+            className="field-control"
           >
             {[5, 4, 3, 2, 1].map((n) => (
               <option key={n} value={n}>
