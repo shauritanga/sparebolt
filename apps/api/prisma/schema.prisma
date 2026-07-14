@@ -129,6 +129,7 @@ model User {
   notifications  Notification[]
   otpCodes       OtpCode[]
   pushTokens     PushToken[]
+  cartSnapshot   CartSnapshot?
 
   @@index([role])
   @@index([phone])
@@ -670,4 +671,29 @@ model Notification {
 
   @@index([userId, read])
   @@map("notifications")
+}
+
+// ─── Cart recovery (abandoned cart push) ─────────────────────────────────────
+
+/// Server-side snapshot of a logged-in user's cart for recovery reminders.
+/// Client cart remains the source of truth for shopping; this is for FCM only.
+model CartSnapshot {
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  /// Compact item list: [{ listingId, title, quantity, price }]
+  items           Json
+  itemCount       Int       @default(0)
+  subtotal        Decimal   @default(0) @db.Decimal(14, 2)
+  lastActivityAt  DateTime  @default(now())
+  /// 0 = none sent yet; max 3
+  remindersSent   Int       @default(0)
+  lastReminderAt  DateTime?
+  nextReminderAt  DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([nextReminderAt])
+  @@map("cart_snapshots")
 }

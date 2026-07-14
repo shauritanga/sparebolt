@@ -103,13 +103,23 @@ export async function registerWebPush(): Promise<{
     const title =
       payload.notification?.title || payload.data?.title || 'SpareBolt';
     const body = payload.notification?.body || payload.data?.body || '';
+    const link = payload.data?.link;
     if (Notification.permission === 'granted' && body) {
       try {
-        new Notification(title, {
+        const n = new Notification(title, {
           body,
           icon: '/icons/icon-192.png',
-          tag: payload.data?.notificationId || 'sparebolt-fg',
+          tag:
+            payload.data?.notificationId ||
+            payload.data?.kind ||
+            'sparebolt-fg',
+          data: payload.data,
         });
+        n.onclick = () => {
+          window.focus();
+          if (link) window.location.href = link;
+          else window.location.href = '/notifications';
+        };
       } catch {
         /* Safari / focus restrictions */
       }

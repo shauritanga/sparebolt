@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import localforage from 'localforage';
 import type { Listing } from '@/lib/api';
+import { scheduleCartSync } from '@/lib/cart-sync';
 
 export type CartItem = {
   listingId: string;
@@ -23,6 +24,10 @@ type CartState = {
   totalItems: () => number;
   subtotal: () => number;
 };
+
+function afterCartChange(items: CartItem[]) {
+  scheduleCartSync(items);
+}
 
 const forageStorage = createJSONStorage(() => ({
   getItem: async (name: string) => {
@@ -48,46 +53,48 @@ export const useCartStore = create<CartState>()(
         set((state) => {
           const existing = state.items.find((i) => i.listingId === listing.id);
           if (existing) {
-            return {
-              items: state.items.map((i) =>
-                i.listingId === listing.id
-                  ? {
-                      ...i,
-                      quantity: Math.min(
-                        i.quantity + qty,
-                        listing.quantity || i.maxQuantity,
-                      ),
-                    }
-                  : i,
-              ),
-            };
+            const items = state.items.map((i) =>
+              i.listingId === listing.id
+                ? {
+                    ...i,
+                    quantity: Math.min(
+                      i.quantity + qty,
+                      listing.quantity || i.maxQuantity,
+                    ),
+                  }
+                : i,
+            );
+            afterCartChange(items);
+            return { items };
           }
-          return {
-            items: [
-              ...state.items,
-              {
-                listingId: listing.id,
-                title: listing.title,
-                price,
-                quantity: Math.min(qty, listing.quantity || qty),
-                image,
-                sellerId: listing.seller?.id,
-                city: listing.city,
-                maxQuantity: listing.quantity || 99,
-              },
-            ],
-          };
+          const items = [
+            ...state.items,
+            {
+              listingId: listing.id,
+              title: listing.title,
+              price,
+              quantity: Math.min(qty, listing.quantity || qty),
+              image,
+              sellerId: listing.seller?.id,
+              city: listing.city,
+              maxQuantity: listing.quantity || 99,
+            },
+          ];
+          afterCartChange(items);
+          return { items };
         });
       },
 
       removeItem: (listingId) =>
-        set((s) => ({
-          items: s.items.filter((i) => i.listingId !== listingId),
-        })),
+        set((s) => {
+          const items = s.items.filter((i) => i.listingId !== listingId);
+          afterCartChange(items);
+          return { items };
+        }),
 
       setQuantity: (listingId, quantity) =>
-        set((s) => ({
-          items: s.items
+        set((s) => {
+          const items = s.items
             .map((i) =>
               i.listingId === listingId
                 ? {
@@ -96,10 +103,15 @@ export const useCartStore = create<CartState>()(
                   }
                 : i,
             )
-            .filter((i) => i.quantity > 0),
-        })),
+            .filter((i) => i.quantity > 0);
+          afterCartChange(items);
+          return { items };
+        }),
 
-      clear: () => set({ items: [] }),
+      clear: () => {
+        afterCartChange([]);
+        set({ items: [] });
+      },
 
       totalItems: () => get().items.reduce((n, i) => n + i.quantity, 0),
 

@@ -50,6 +50,11 @@ export function AppShell() {
         }
       });
     });
+    // Sync local cart to server for abandoned-cart recovery
+    void import('@/lib/cart-sync').then(({ flushCartSync }) => {
+      if (cancelled) return;
+      flushCartSync(useCartStore.getState().items);
+    });
     return () => {
       cancelled = true;
     };

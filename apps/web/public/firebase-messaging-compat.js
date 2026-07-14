@@ -30,8 +30,9 @@ self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const data = event.notification.data || {};
   let url = '/notifications';
-  if (data.orderId) url = '/orders/' + data.orderId;
-  else if (data.link) url = data.link;
+  if (data.link) url = data.link;
+  else if (data.kind === 'cart_recovery') url = '/cart';
+  else if (data.orderId) url = '/orders/' + data.orderId;
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
       for (const client of list) {
