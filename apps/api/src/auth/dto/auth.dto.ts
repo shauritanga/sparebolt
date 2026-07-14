@@ -84,6 +84,60 @@ export class VerifyOtpDto {
   lastName?: string;
 }
 
+/** Customer-editable profile fields */
+export class UpdateProfileDto {
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
+  firstName?: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
+  lastName?: string;
+
+  @IsOptional()
+  @IsEmail()
+  email?: string;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^\+?[0-9]{9,15}$/, { message: 'Invalid phone number' })
+  phone?: string;
+
+  @IsOptional()
+  @IsString()
+  @Matches(MEDIA_URL, {
+    message: 'avatarUrl must be a URL or /uploads/… path',
+  })
+  avatarUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  locale?: string; // en | sw
+
+  // Default delivery address (upserted when any location field is sent)
+  @IsOptional()
+  @IsString()
+  addressLabel?: string;
+
+  @IsOptional()
+  @IsString()
+  addressStreet?: string;
+
+  @IsOptional()
+  @IsString()
+  addressArea?: string; // ward
+
+  @IsOptional()
+  @IsString()
+  addressCity?: string; // district
+
+  @IsOptional()
+  @IsString()
+  addressRegion?: string;
+}
+
 /**
  * Full seller KYC for customer safety.
  * Status starts as PENDING until admin verifies documents.

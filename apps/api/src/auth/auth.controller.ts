@@ -1,4 +1,11 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Patch,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import {
   LoginDto,
@@ -6,6 +13,7 @@ import {
   RegisterDriverDto,
   RegisterSellerDto,
   RequestOtpDto,
+  UpdateProfileDto,
   VerifyOtpDto,
 } from './dto/auth.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
@@ -39,6 +47,15 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   me(@CurrentUser('id') userId: string) {
     return this.auth.me(userId);
+  }
+
+  @Patch('me')
+  @UseGuards(JwtAuthGuard)
+  updateProfile(
+    @CurrentUser('id') userId: string,
+    @Body() dto: UpdateProfileDto,
+  ) {
+    return this.auth.updateProfile(userId, dto);
   }
 
   @Post('become-seller')

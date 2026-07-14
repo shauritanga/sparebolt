@@ -15,6 +15,7 @@ import {
   RegisterDriverDto,
   RegisterSellerDto,
   RequestOtpDto,
+  UpdateProfileDto,
   VerifyOtpDto,
 } from './dto/auth.dto';
 
@@ -390,5 +391,100 @@ export class AuthService {
     });
     if (!user) throw new UnauthorizedException();
     return this.sanitize(user);
+  }
+
+  async updateProfile(userId: string, dto: UpdateProfileDto) {
+    const existing = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+    if (!existing) throw new UnauthorizedException();
+
+    if (dto.email !== undefined && dto.email !== existing.email) {
+      if (dto.email) {
+        const taken = await this.prisma.user.findFirst({
+          where: { email: dto.email, NOT: { id: userId } },
+        });
+        if (taken) throw new ConflictException('Email already in use');
+      }
+    }
+    if (dto.phone !== undefined && dto.phone !== existing.phone) {
+      if (dto.phone) {
+        const taken = await this.prisma.user.findFirst({
+          where: { phone: dto.phone, NOT: { id: userId } },
+        });
+        if (taken) throw new ConflictException('Phone already in use');
+      }
+    }
+
+    const data: {
+      firstName?: string;
+      lastName?: string;
+      email?: string | null;
+      phone?: string | null;
+      avatarUrl?: string | null;
+      locale?: string;
+    } = {};
+
+    if (dto.firstName !== undefined) data.firstName = dto.firstName.trim();
+    if (dto.lastName !== undefined) data.lastName = dto.lastName.trim();
+    if (dto.email !== undefined) data.email = dto.email || null;
+    if (dto.phone !== undefined) data.phone = dto.phone || null;
+    if (dto.avatarUrl !== undefined) data.avatarUrl = dto.avatarUrl || null;
+    if (dto.locale !== undefined) {
+      data.locale = dto.locale === 'sw' ? 'sw' : 'en';
+    }
+
+    const hasLocation =
+      dto.addressStreet !== undefined ||
+      dto.addressCity !== undefined ||
+      dto.addressRegion !== undefined ||
+      dto.addressArea !== undefined;
+
+    await this.prisma.$transaction(async (tx) => {
+      if (Object.keys(data).length > 0) {
+        await tx.user.update({ where: { id: userId }, data });
+      }
+
+      if (hasLocation) {
+        const street = (dto.addressStreet || '').trim();
+        const city = (dto.addressCity || '').trim();
+        const region = dto.addressRegion?.trim() || null;
+        const area = dto.addressArea?.trim() || null;
+        const label = (dto.addressLabel || 'Home').trim() || 'Home';
+
+        if (street && city) {
+          const currentDefault = await tx.address.findFirst({
+            where: { userId, isDefault: true },
+          });
+          if (currentDefault) {
+            await tx.address.update({
+              where: { id: currentDefault.id },
+              data: {
+                label,
+                street,
+                city,
+                region,
+                area,
+                isDefault: true,
+              },
+            });
+          } else {
+            await tx.address.create({
+              data: {
+                userId,
+                label,
+                street,
+                city,
+                region,
+                area,
+                isDefault: true,
+              },
+            });
+          }
+        }
+      }
+    });
+
+    return this.me(userId);
   }
 }

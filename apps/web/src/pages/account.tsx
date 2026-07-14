@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -10,17 +11,19 @@ import {
   LogOut,
   Moon,
   Package,
+  Pencil,
   ShoppingCart,
   Store,
   Sun,
   Truck,
   User,
-  UserRound,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 import { useCartStore } from '@/stores/cart-store';
 import { useTheme } from '@/hooks/use-theme';
 import { Button } from '@/components/ui/button';
+import { EditProfileSheet } from '@/components/edit-profile-sheet';
+import { SafeImage } from '@/components/safe-image';
 import { cn } from '@/lib/utils';
 
 const SUPPORT_EMAIL = 'support@ditronics.co.tz';
@@ -125,6 +128,7 @@ export function AccountPage() {
   const { user, logout } = useAuthStore();
   const cartCount = useCartStore((s) => s.totalItems());
   const { isDark, toggleTheme } = useTheme();
+  const [editOpen, setEditOpen] = useState(false);
 
   const toggleLang = () => {
     const next = i18n.language === 'en' ? 'sw' : 'en';
@@ -316,13 +320,21 @@ export function AccountPage() {
     },
   ];
 
+  const defaultAddr =
+    user.addresses?.find((a) => a.isDefault) || user.addresses?.[0];
+  const locationHint = defaultAddr
+    ? [defaultAddr.area, defaultAddr.city, defaultAddr.region]
+        .filter(Boolean)
+        .join(', ')
+    : undefined;
+
   const support: MenuRow[] = [
     {
-      key: 'profile',
-      label: t('personalDetails'),
-      icon: UserRound,
-      hint:
-        [user.email, user.phone].filter(Boolean).join(' · ') || t('noContact'),
+      key: 'edit-profile',
+      label: t('editProfile'),
+      icon: Pencil,
+      onClick: () => setEditOpen(true),
+      hint: locationHint || t('personalDetails'),
     },
     {
       key: 'help',
@@ -338,13 +350,25 @@ export function AccountPage() {
   return (
     <div className="mx-auto max-w-md space-y-5">
       {/* Profile card — avatar + role, name, phone (high contrast) */}
-      <div className="rounded-3xl border border-bolt-900/20 bg-bolt-800 p-5 text-white shadow-md dark:border-bolt-700/40 dark:bg-bolt-950">
+      <button
+        type="button"
+        onClick={() => setEditOpen(true)}
+        className="w-full rounded-3xl border border-bolt-900/20 bg-bolt-800 p-5 text-left text-white shadow-md cursor-pointer dark:border-bolt-700/40 dark:bg-bolt-950"
+      >
         <div className="flex items-center gap-4">
           <span
-            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/20 text-lg font-extrabold tracking-wide text-white ring-2 ring-white/30"
+            className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white/20 text-lg font-extrabold tracking-wide text-white ring-2 ring-white/30"
             aria-hidden
           >
-            {initials}
+            {user.avatarUrl ? (
+              <SafeImage
+                src={user.avatarUrl}
+                alt=""
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              initials
+            )}
           </span>
           <div className="min-w-0 flex-1">
             <p className="text-xs font-bold uppercase tracking-wider text-bolt-100">
@@ -363,8 +387,11 @@ export function AccountPage() {
               </p>
             )}
           </div>
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/15 text-white">
+            <Pencil className="h-4 w-4" />
+          </span>
         </div>
-      </div>
+      </button>
 
       {user.sellerProfile?.status === 'PENDING' && (
         <div className="panel-warning p-4 text-sm">
@@ -413,6 +440,12 @@ export function AccountPage() {
       </Button>
 
       <AccountFooter />
+
+      <EditProfileSheet
+        open={editOpen}
+        onClose={() => setEditOpen(false)}
+        user={user}
+      />
     </div>
   );
 }
