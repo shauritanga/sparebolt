@@ -99,13 +99,25 @@ export function OrdersPage() {
   );
 }
 
+type PartyReviewDraft = {
+  rating: number;
+  comment: string;
+  submitting: boolean;
+};
+
 export function OrderDetailPage() {
   const { id } = useParams();
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [order, setOrder] = useState<Order | null>(null);
-  const [rating, setRating] = useState(5);
-  const [comment, setComment] = useState('');
+  const [sellerDrafts, setSellerDrafts] = useState<
+    Record<string, PartyReviewDraft>
+  >({});
+  const [driverDraft, setDriverDraft] = useState<PartyReviewDraft>({
+    rating: 5,
+    comment: '',
+    submitting: false,
+  });
   const [loading, setLoading] = useState(true);
 
   const trackingLive = !!order?.tracking?.enabled;
@@ -114,7 +126,21 @@ export function OrderDetailPage() {
     if (!id) return;
     void api
       .get(`/orders/${id}`)
-      .then((r) => setOrder(r.data))
+      .then((r) => {
+        const o = r.data as Order;
+        setOrder(o);
+        // Init seller drafts once we know unique sellers
+        const sellers = uniqueSellers(o);
+        setSellerDrafts((prev) => {
+          const next = { ...prev };
+          for (const s of sellers) {
+            if (!next[s.id]) {
+              next[s.id] = { rating: 5, comment: '', submitting: false };
+            }
+          }
+          return next;
+        });
+      })
       .catch(() => setOrder(null))
       .finally(() => setLoading(false));
   };
@@ -206,18 +232,48 @@ export function OrderDetailPage() {
     }
   };
 
-  const review = async () => {
+  const submitSellerReview = async (sellerId: string, name: string) => {
+    const draft = sellerDrafts[sellerId] || {
+      rating: 5,
+      comment: '',
+      submitting: false,
+    };
+    setSellerDrafts((p) => ({
+      ...p,
+      [sellerId]: { ...draft, submitting: true },
+    }));
     try {
-      const sellerId = order.items[0]?.sellerId;
       await api.post(`/orders/${order.id}/reviews`, {
-        rating,
-        comment,
+        rating: draft.rating,
+        comment: draft.comment || undefined,
         sellerId,
-        driverId: order.delivery?.driverId,
       });
-      toast.success('Thanks for your review');
+      toast.success(`Thanks for rating ${name}`);
+      load();
     } catch {
-      toast.error('Review failed');
+      toast.error('Could not submit seller rating');
+      setSellerDrafts((p) => ({
+        ...p,
+        [sellerId]: { ...draft, submitting: false },
+      }));
+    }
+  };
+
+  const submitDriverReview = async () => {
+    const driverId = order.delivery?.driverId;
+    if (!driverId) return;
+    setDriverDraft((d) => ({ ...d, submitting: true }));
+    try {
+      await api.post(`/orders/${order.id}/reviews`, {
+        rating: driverDraft.rating,
+        comment: driverDraft.comment || undefined,
+        driverId,
+      });
+      toast.success('Thanks for rating the driver');
+      load();
+    } catch {
+      toast.error('Could not submit driver rating');
+      setDriverDraft((d) => ({ ...d, submitting: false }));
     }
   };
 
@@ -442,29 +498,217 @@ export function OrderDetailPage() {
       )}
 
       {(order.status === 'CONFIRMED' || order.status === 'DELIVERED') && (
-        <div className="space-y-2 rounded-2xl border border-border bg-card p-4">
-          <h3 className="font-display font-bold">Rate your experience</h3>
-          <select
-            value={rating}
-            onChange={(e) => setRating(Number(e.target.value))}
-            className="field-control"
-          >
-            {[5, 4, 3, 2, 1].map((n) => (
-              <option key={n} value={n}>
-                {n} stars
-              </option>
-            ))}
-          </select>
-          <Input
-            placeholder="Comment (optional)"
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-          />
-          <Button variant="secondary" onClick={() => void review()}>
-            Submit review
-          </Button>
+        <div className="space-y-3">
+          <div>
+            <h3 className="font-display text-lg font-bold">Rate separately</h3>
+            <p className="text-xs text-muted-foreground">
+              Seller and driver are scored independently so each gets the
+              rating they earned.
+            </p>
+          </div>
+
+          {uniqueSellers(order).map((seller) => {
+            const existing = order.reviews?.find(
+              (r) => r.sellerId === seller.id,
+            );
+            const draft = sellerDrafts[seller.id] || {
+              rating: 5,
+              comment: '',
+              submitting: false,
+            };
+            return (
+              <div
+                key={seller.id}
+                className="space-y-2 rounded-2xl border border-border bg-card p-4"
+              >
+                <div className="flex items-start gap-2">
+                  <Store className="mt-0.5 h-4 w-4 shrink-0 text-amber-signal" />
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                      Seller / shop
+                    </p>
+                    <p className="font-semibold text-foreground">
+                      {seller.name}
+                    </p>
+                  </div>
+                </div>
+                {existing ? (
+                  <p className="rounded-xl bg-muted/60 px-3 py-2 text-sm">
+                    You rated this seller{' '}
+                    <strong>{existing.rating}★</strong>
+                    {existing.comment ? (
+                      <span className="mt-1 block text-muted-foreground">
+                        “{existing.comment}”
+                      </span>
+                    ) : null}
+                  </p>
+                ) : (
+                  <>
+                    <StarPicker
+                      value={draft.rating}
+                      onChange={(rating) =>
+                        setSellerDrafts((p) => ({
+                          ...p,
+                          [seller.id]: { ...draft, rating },
+                        }))
+                      }
+                    />
+                    <Input
+                      placeholder="Comment about parts / shop (optional)"
+                      value={draft.comment}
+                      onChange={(e) =>
+                        setSellerDrafts((p) => ({
+                          ...p,
+                          [seller.id]: {
+                            ...draft,
+                            comment: e.target.value,
+                          },
+                        }))
+                      }
+                    />
+                    <Button
+                      variant="secondary"
+                      className="w-full"
+                      disabled={draft.submitting}
+                      onClick={() =>
+                        void submitSellerReview(seller.id, seller.name)
+                      }
+                    >
+                      {draft.submitting
+                        ? 'Submitting…'
+                        : 'Submit seller rating'}
+                    </Button>
+                  </>
+                )}
+              </div>
+            );
+          })}
+
+          {order.delivery?.driverId && (
+            <div className="space-y-2 rounded-2xl border border-border bg-card p-4">
+              <div className="flex items-start gap-2">
+                <Navigation className="mt-0.5 h-4 w-4 shrink-0 text-bolt-700 dark:text-bolt-300" />
+                <div className="min-w-0">
+                  <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                    Driver
+                  </p>
+                  <p className="font-semibold text-foreground">
+                    {order.delivery.driver?.name ||
+                      order.tracking?.driver?.name ||
+                      'Your driver'}
+                  </p>
+                  {(order.delivery.driver?.vehiclePlate ||
+                    order.tracking?.driver?.vehiclePlate) && (
+                    <p className="text-xs text-muted-foreground">
+                      {order.delivery.driver?.vehicleType ||
+                        order.tracking?.driver?.vehicleType}{' '}
+                      ·{' '}
+                      {order.delivery.driver?.vehiclePlate ||
+                        order.tracking?.driver?.vehiclePlate}
+                    </p>
+                  )}
+                </div>
+              </div>
+              {order.reviews?.find(
+                (r) => r.driverId === order.delivery?.driverId,
+              ) ? (
+                (() => {
+                  const existing = order.reviews!.find(
+                    (r) => r.driverId === order.delivery?.driverId,
+                  )!;
+                  return (
+                    <p className="rounded-xl bg-muted/60 px-3 py-2 text-sm">
+                      You rated this driver{' '}
+                      <strong>{existing.rating}★</strong>
+                      {existing.comment ? (
+                        <span className="mt-1 block text-muted-foreground">
+                          “{existing.comment}”
+                        </span>
+                      ) : null}
+                    </p>
+                  );
+                })()
+              ) : (
+                <>
+                  <StarPicker
+                    value={driverDraft.rating}
+                    onChange={(rating) =>
+                      setDriverDraft((d) => ({ ...d, rating }))
+                    }
+                  />
+                  <Input
+                    placeholder="Comment about delivery (optional)"
+                    value={driverDraft.comment}
+                    onChange={(e) =>
+                      setDriverDraft((d) => ({
+                        ...d,
+                        comment: e.target.value,
+                      }))
+                    }
+                  />
+                  <Button
+                    variant="secondary"
+                    className="w-full"
+                    disabled={driverDraft.submitting}
+                    onClick={() => void submitDriverReview()}
+                  >
+                    {driverDraft.submitting
+                      ? 'Submitting…'
+                      : 'Submit driver rating'}
+                  </Button>
+                </>
+              )}
+            </div>
+          )}
         </div>
       )}
+    </div>
+  );
+}
+
+function uniqueSellers(order: Order): { id: string; name: string }[] {
+  const map = new Map<string, string>();
+  for (const item of order.items || []) {
+    if (!item.sellerId) continue;
+    if (map.has(item.sellerId)) continue;
+    const name =
+      item.listing?.seller?.businessName ||
+      `Seller · ${item.title.slice(0, 24)}`;
+    map.set(item.sellerId, name);
+  }
+  return [...map.entries()].map(([id, name]) => ({ id, name }));
+}
+
+function StarPicker({
+  value,
+  onChange,
+}: {
+  value: number;
+  onChange: (n: number) => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-1">
+      {[1, 2, 3, 4, 5].map((n) => (
+        <button
+          key={n}
+          type="button"
+          onClick={() => onChange(n)}
+          className="min-h-[40px] min-w-[40px] cursor-pointer rounded-lg p-1"
+          aria-label={`${n} stars`}
+          aria-pressed={value === n}
+        >
+          <Star
+            className={`h-7 w-7 ${
+              n <= value
+                ? 'fill-amber-signal text-amber-signal'
+                : 'text-muted-foreground'
+            }`}
+          />
+        </button>
+      ))}
+      <span className="ml-1 text-sm font-semibold text-muted-foreground">
+        {value}/5
+      </span>
     </div>
   );
 }

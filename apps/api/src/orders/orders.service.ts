@@ -170,7 +170,18 @@ export class OrdersService {
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
       include: {
-        items: { include: { listing: { include: { images: true } } } },
+        items: {
+          include: {
+            listing: {
+              include: {
+                images: true,
+                seller: {
+                  select: { id: true, businessName: true, city: true },
+                },
+              },
+            },
+          },
+        },
         payment: true,
         escrow: true,
         delivery: { include: { driver: { include: { user: true } } } },
@@ -414,17 +425,76 @@ export class OrdersService {
     return dispute;
   }
 
+  /**
+   * Rate seller OR driver separately (professional: one score per party).
+   * Exactly one of sellerId / driverId must be provided.
+   */
   async addReview(userId: string, orderId: string, dto: CreateReviewDto) {
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
-      include: { delivery: true },
+      include: {
+        delivery: true,
+        items: true,
+        reviews: {
+          where: { authorId: userId },
+        },
+      },
     });
     if (!order || order.customerId !== userId) throw new ForbiddenException();
-    if (order.status !== OrderStatus.CONFIRMED && order.status !== OrderStatus.DELIVERED) {
+    if (
+      order.status !== OrderStatus.CONFIRMED &&
+      order.status !== OrderStatus.DELIVERED
+    ) {
       throw new BadRequestException('Can only review completed deliveries');
     }
     if (dto.rating < 1 || dto.rating > 5) {
       throw new BadRequestException('Rating must be 1-5');
+    }
+
+    const hasSeller = !!dto.sellerId?.trim();
+    const hasDriver = !!dto.driverId?.trim();
+    if (hasSeller === hasDriver) {
+      throw new BadRequestException(
+        'Rate seller and driver separately — send exactly one of sellerId or driverId',
+      );
+    }
+
+    if (hasSeller) {
+      const onOrder = order.items.some((i) => i.sellerId === dto.sellerId);
+      if (!onOrder) {
+        throw new BadRequestException('Seller is not part of this order');
+      }
+      const already = order.reviews.some(
+        (r) => r.sellerId === dto.sellerId && !r.driverId,
+      );
+      // also treat any review with this sellerId as already done
+      const alreadyAny = order.reviews.some((r) => r.sellerId === dto.sellerId);
+      if (already || alreadyAny) {
+        throw new BadRequestException('You already rated this seller for this order');
+      }
+
+      const review = await this.prisma.review.create({
+        data: {
+          orderId,
+          authorId: userId,
+          rating: dto.rating,
+          comment: dto.comment,
+          sellerId: dto.sellerId,
+          driverId: null,
+        },
+      });
+      await this.recalcSellerRating(dto.sellerId!);
+      return review;
+    }
+
+    // Driver-only review
+    const driverId = dto.driverId!;
+    if (!order.delivery?.driverId || order.delivery.driverId !== driverId) {
+      throw new BadRequestException('Driver is not assigned to this order');
+    }
+    const alreadyDriver = order.reviews.some((r) => r.driverId === driverId);
+    if (alreadyDriver) {
+      throw new BadRequestException('You already rated this driver for this order');
     }
 
     const review = await this.prisma.review.create({
@@ -433,18 +503,11 @@ export class OrdersService {
         authorId: userId,
         rating: dto.rating,
         comment: dto.comment,
-        sellerId: dto.sellerId,
-        driverId: dto.driverId ?? order.delivery?.driverId,
+        sellerId: null,
+        driverId,
       },
     });
-
-    if (dto.sellerId) {
-      await this.recalcSellerRating(dto.sellerId);
-    }
-    if (review.driverId) {
-      await this.recalcDriverRating(review.driverId);
-    }
-
+    await this.recalcDriverRating(driverId);
     return review;
   }
 

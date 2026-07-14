@@ -180,6 +180,17 @@ export type Order = {
     quantity: number;
     lineTotal: string | number;
     sellerId: string;
+    listing?: {
+      seller?: { id: string; businessName: string; city?: string };
+    };
+  }[];
+  reviews?: {
+    id: string;
+    rating: number;
+    comment?: string | null;
+    sellerId?: string | null;
+    driverId?: string | null;
+    createdAt: string;
   }[];
   payment?: { status: string; method?: string };
   escrow?: { status: string; amount: string | number };
