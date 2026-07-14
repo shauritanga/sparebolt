@@ -74,11 +74,33 @@ async function main() {
     create: {
       userId: sellerUser.id,
       businessName: 'Juma Auto Parts',
+      businessType: 'individual',
       description: 'Genuine & quality used parts for Japanese and European cars.',
+      legalFullName: 'Juma Hassan',
+      nationalId: '19880115-12345-00001-45',
+      nationalIdFrontUrl:
+        'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400&q=80',
+      nationalIdBackUrl:
+        'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400&q=80',
+      selfieUrl:
+        'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&q=80',
+      addressStreet: 'Nyerere Road, Gerezani',
+      addressArea: 'Gerezani',
+      addressWard: 'Kariakoo',
       city: 'Dar es Salaam',
       region: 'Dar es Salaam',
+      addressLandmark: 'Near Kariakoo market',
       latitude: -6.7924,
       longitude: 39.2083,
+      shopExteriorUrl:
+        'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?w=600&q=80',
+      payoutMethod: 'mobile_money',
+      payoutPhone: '+255700000003',
+      payoutAccountName: 'Juma Hassan',
+      yearsTrading: 8,
+      termsAcceptedAt: new Date(),
+      dataConsentAt: new Date(),
+      accurateListingAt: new Date(),
       status: 'APPROVED',
       ratingAvg: 4.7,
       ratingCount: 23,
@@ -90,11 +112,49 @@ async function main() {
     update: {},
     create: {
       userId: driverUser.id,
+      legalFullName: 'Baraka Kimaro',
+      nationalId: '19900101-12345-00001-23',
+      nationalIdFrontUrl:
+        'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400&q=80',
+      nationalIdBackUrl:
+        'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400&q=80',
+      selfieUrl:
+        'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&q=80',
+      addressStreet: 'Mwenge Magomeni Street',
+      addressArea: 'Mwenge',
+      addressWard: 'Makumbusho',
+      city: 'Dar es Salaam',
+      addressLandmark: 'Near Mwenge bus stand',
       vehicleType: 'motorcycle',
       vehiclePlate: 'T 123 ABC',
+      vehicleMake: 'TVS',
+      vehicleModel: 'Star HLX',
+      vehicleColor: 'Red',
+      vehicleYear: 2021,
+      vehiclePhotoSideUrl:
+        'https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=600&q=80',
+      vehiclePhotoRearUrl:
+        'https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=600&q=80',
+      vehiclePhotoWithDriverUrl:
+        'https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=600&q=80',
       licenseNumber: 'DL-DSM-44521',
+      licenseClass: 'A',
+      licensePhotoUrl:
+        'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400&q=80',
       licenseVerified: true,
-      city: 'Dar es Salaam',
+      payoutMethod: 'mobile_money',
+      payoutPhone: '+255700000004',
+      payoutAccountName: 'Baraka Kimaro',
+      emergencyName: 'Grace Kimaro',
+      emergencyPhone: '+255700000099',
+      emergencyRelation: 'Spouse',
+      guarantorName: 'John Mushi',
+      guarantorPhone: '+255700000088',
+      guarantorIdNumber: '19850505-11111-00002-11',
+      guarantorAddress: 'Kinondoni, Dar es Salaam',
+      termsAcceptedAt: new Date(),
+      dataConsentAt: new Date(),
+      trackingConsentAt: new Date(),
       latitude: -6.8,
       longitude: 39.28,
       isOnline: true,
@@ -186,6 +246,7 @@ async function main() {
       partNumber: '04465-0K280',
       condition: PartCondition.NEW,
       price: 85000,
+      compareAtPrice: 110000,
       quantity: 12,
       make: 'Toyota',
       model: 'Hilux',
@@ -222,6 +283,7 @@ async function main() {
       partNumber: '23100-JG00A',
       condition: PartCondition.USED,
       price: 120000,
+      compareAtPrice: 165000,
       quantity: 2,
       make: 'Nissan',
       model: 'X-Trail',
@@ -254,6 +316,7 @@ async function main() {
         'Left-hand headlight for Land Cruiser 200 series. Clear lens, new bulbs included. OEM-style fitment.',
       condition: PartCondition.NEW,
       price: 280000,
+      compareAtPrice: 350000,
       quantity: 3,
       make: 'Toyota',
       model: 'Land Cruiser',
@@ -287,6 +350,7 @@ async function main() {
         'Durable AT tyres for Hilux, D-Max, Navara. Excellent for city + rough roads. Free balancing at partner shop.',
       condition: PartCondition.NEW,
       price: 520000,
+      compareAtPrice: 640000,
       quantity: 8,
       make: 'Toyota',
       model: 'Hilux',
@@ -317,8 +381,23 @@ async function main() {
 
   const existingCount = await prisma.listing.count();
   if (existingCount === 0) {
-    for (const l of listings) {
+    const imagePool = [
+      'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?w=800&q=80',
+      'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=800&q=80',
+      'https://images.unsplash.com/photo-1619642751034-765dfdf7c58e?w=800&q=80',
+      'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=800&q=80',
+      'https://images.unsplash.com/photo-1487754180451-c456f719a1fc?w=800&q=80',
+      'https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=800&q=80',
+    ];
+    for (const [idx, l] of listings.entries()) {
       const { images, ...data } = l;
+      // Enforce at least 3 photos per listing
+      const photoUrls = [...images];
+      let p = 0;
+      while (photoUrls.length < 3) {
+        photoUrls.push(imagePool[(idx + p) % imagePool.length]);
+        p++;
+      }
       await prisma.listing.create({
         data: {
           ...data,
@@ -328,7 +407,7 @@ async function main() {
           longitude: 39.2083,
           currency: 'TZS',
           images: {
-            create: images.map((url, i) => ({
+            create: photoUrls.map((url, i) => ({
               url,
               sortOrder: i,
               isPrimary: i === 0,

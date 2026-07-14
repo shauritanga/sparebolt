@@ -1,0 +1,47 @@
+-- AlterTable
+ALTER TABLE "driver_profiles" ADD COLUMN     "addressArea" TEXT,
+ADD COLUMN     "addressLandmark" TEXT,
+ADD COLUMN     "addressStreet" TEXT,
+ADD COLUMN     "addressWard" TEXT,
+ADD COLUMN     "bankAccountNumber" TEXT,
+ADD COLUMN     "bankName" TEXT,
+ADD COLUMN     "dataConsentAt" TIMESTAMP(3),
+ADD COLUMN     "dateOfBirth" TIMESTAMP(3),
+ADD COLUMN     "emergencyName" TEXT,
+ADD COLUMN     "emergencyPhone" TEXT,
+ADD COLUMN     "emergencyRelation" TEXT,
+ADD COLUMN     "guarantorAddress" TEXT,
+ADD COLUMN     "guarantorIdNumber" TEXT,
+ADD COLUMN     "guarantorName" TEXT,
+ADD COLUMN     "guarantorPhone" TEXT,
+ADD COLUMN     "homeLatitude" DOUBLE PRECISION,
+ADD COLUMN     "homeLongitude" DOUBLE PRECISION,
+ADD COLUMN     "insuranceDocUrl" TEXT,
+ADD COLUMN     "insuranceExpiresAt" TIMESTAMP(3),
+ADD COLUMN     "legalFullName" TEXT,
+ADD COLUMN     "licenseClass" TEXT,
+ADD COLUMN     "licensePhotoUrl" TEXT,
+ADD COLUMN     "nationalId" TEXT,
+ADD COLUMN     "nationalIdBackUrl" TEXT,
+ADD COLUMN     "nationalIdFrontUrl" TEXT,
+ADD COLUMN     "payoutAccountName" TEXT,
+ADD COLUMN     "payoutMethod" TEXT,
+ADD COLUMN     "payoutPhone" TEXT,
+ADD COLUMN     "rejectionReason" TEXT,
+ADD COLUMN     "secondaryPhone" TEXT,
+ADD COLUMN     "selfieUrl" TEXT,
+ADD COLUMN     "termsAcceptedAt" TIMESTAMP(3),
+ADD COLUMN     "trackingConsentAt" TIMESTAMP(3),
+ADD COLUMN     "vehicleColor" TEXT,
+ADD COLUMN     "vehicleMake" TEXT,
+ADD COLUMN     "vehicleModel" TEXT,
+ADD COLUMN     "vehiclePhotoRearUrl" TEXT,
+ADD COLUMN     "vehiclePhotoSideUrl" TEXT,
+ADD COLUMN     "vehiclePhotoWithDriverUrl" TEXT,
+ADD COLUMN     "vehicleYear" INTEGER;
+
+-- CreateIndex
+CREATE INDEX "driver_profiles_nationalId_idx" ON "driver_profiles"("nationalId");
+
+-- CreateIndex
+CREATE INDEX "driver_profiles_vehiclePlate_idx" ON "driver_profiles"("vehiclePlate");

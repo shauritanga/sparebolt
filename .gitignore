@@ -11,6 +11,7 @@ coverage
 .vite
 apps/api/prisma/*.db
 apps/api/uploads
+!apps/api/uploads/.gitkeep
 *.tsbuildinfo
 .idea
 .vscode

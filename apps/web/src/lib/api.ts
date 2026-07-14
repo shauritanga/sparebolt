@@ -49,6 +49,11 @@ export type SellerProfile = {
   ratingAvg: number;
   ratingCount: number;
   status: string;
+  legalFullName?: string | null;
+  nationalId?: string | null;
+  payoutAccountName?: string | null;
+  rejectionReason?: string | null;
+  businessType?: string | null;
 };
 
 export type DriverProfile = {
@@ -59,6 +64,12 @@ export type DriverProfile = {
   isOnline: boolean;
   ratingAvg: number;
   status: string;
+  legalFullName?: string | null;
+  nationalId?: string | null;
+  licenseNumber?: string;
+  licenseVerified?: boolean;
+  payoutAccountName?: string | null;
+  rejectionReason?: string | null;
 };
 
 export type Address = {
@@ -88,9 +99,15 @@ export type Listing = {
   partNumber?: string | null;
   condition: 'NEW' | 'USED' | 'REFURBISHED';
   price: string | number;
+  compareAtPrice?: string | number | null;
   currency: string;
   quantity: number;
   isActive?: boolean;
+  manufacturer?: string | null;
+  brand?: string | null;
+  partType?: string | null;
+  engine?: string | null;
+  warrantyMonths?: number | null;
   make?: string | null;
   model?: string | null;
   yearFrom?: number | null;
@@ -105,6 +122,11 @@ export type Listing = {
     city: string;
     ratingAvg: number;
     ratingCount: number;
+    user?: {
+      firstName?: string;
+      lastName?: string;
+      avatarUrl?: string | null;
+    };
   };
 };
 

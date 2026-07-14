@@ -7,8 +7,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { SafeImage } from '@/components/safe-image';
+import { ImageUploadField } from '@/components/image-upload-field';
+import { useAuthStore } from '@/stores/auth-store';
 
 export function SellerDashboardPage() {
+  const sellerProfile = useAuthStore((s) => s.user?.sellerProfile);
+  const approved = sellerProfile?.status === 'APPROVED';
   const [data, setData] = useState<{
     businessName: string;
     ratingAvg: number;
@@ -19,8 +23,31 @@ export function SellerDashboardPage() {
   } | null>(null);
 
   useEffect(() => {
+    if (!approved) return;
     void api.get('/seller/analytics').then((r) => setData(r.data));
-  }, []);
+  }, [approved]);
+
+  if (sellerProfile && !approved) {
+    return (
+      <div className="mx-auto max-w-lg space-y-4 py-8 text-center">
+        <h1 className="font-display text-2xl font-extrabold">Seller</h1>
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-left">
+          <Badge variant="warning">{sellerProfile.status}</Badge>
+          <p className="mt-3 font-semibold text-steel-900">
+            {sellerProfile.status === 'PENDING'
+              ? 'Your seller application is under review'
+              : 'You cannot list parts right now'}
+          </p>
+          <p className="mt-2 text-sm text-steel-600">
+            {sellerProfile.status === 'PENDING'
+              ? 'An admin must verify your ID and shop before you can create listings.'
+              : sellerProfile.rejectionReason ||
+                'Contact support if you believe this is an error.'}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (!data) {
     return <div className="h-40 animate-pulse rounded-2xl bg-steel-200/60" />;
@@ -135,6 +162,9 @@ export function SellerListingsPage() {
   );
 }
 
+const MIN_IMAGES = 3;
+const MAX_IMAGES = 10;
+
 export function NewListingPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
@@ -145,14 +175,16 @@ export function NewListingPage() {
     partNumber: '',
     condition: 'NEW',
     price: '',
+    compareAtPrice: '',
     quantity: '1',
     make: '',
     model: '',
     yearFrom: '',
     yearTo: '',
     city: 'Dar es Salaam',
-    imageUrl: '',
   });
+  /** Always start with 3 required image slots */
+  const [images, setImages] = useState<string[]>(['', '', '']);
 
   useEffect(() => {
     void api.get('/categories').then((r) => {
@@ -161,8 +193,34 @@ export function NewListingPage() {
     });
   }, []);
 
+  const filledImages = images.map((u) => u.trim()).filter(Boolean);
+
+  const setImageAt = (index: number, value: string) => {
+    setImages((prev) => prev.map((u, i) => (i === index ? value : u)));
+  };
+
+  const addImageSlot = () => {
+    if (images.length >= MAX_IMAGES) {
+      toast.error(`Maximum ${MAX_IMAGES} images`);
+      return;
+    }
+    setImages((prev) => [...prev, '']);
+  };
+
+  const removeImageSlot = (index: number) => {
+    if (images.length <= MIN_IMAGES) {
+      toast.error(`At least ${MIN_IMAGES} images are required`);
+      return;
+    }
+    setImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (filledImages.length < MIN_IMAGES) {
+      toast.error(`Add at least ${MIN_IMAGES} product photos (URLs)`);
+      return;
+    }
     setLoading(true);
     try {
       await api.post('/listings', {
@@ -172,18 +230,27 @@ export function NewListingPage() {
         partNumber: form.partNumber || undefined,
         condition: form.condition,
         price: Number(form.price),
+        compareAtPrice: form.compareAtPrice
+          ? Number(form.compareAtPrice)
+          : undefined,
         quantity: Number(form.quantity),
         make: form.make || undefined,
         model: form.model || undefined,
         yearFrom: form.yearFrom ? Number(form.yearFrom) : undefined,
         yearTo: form.yearTo ? Number(form.yearTo) : undefined,
         city: form.city,
-        images: form.imageUrl ? [form.imageUrl] : undefined,
+        images: filledImages,
       });
       toast.success('Listing created');
       window.location.href = '/seller/listings';
-    } catch {
-      toast.error('Failed to create listing');
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string | string[] } } })
+        ?.response?.data?.message;
+      toast.error(
+        Array.isArray(msg)
+          ? msg.join(', ')
+          : msg || 'Failed to create listing',
+      );
     } finally {
       setLoading(false);
     }
@@ -222,22 +289,34 @@ export function NewListingPage() {
         />
         <div className="grid grid-cols-2 gap-2">
           <Input
-            placeholder="Price (TZS)"
+            placeholder="Sale price (TZS)"
             type="number"
             required
             value={form.price}
             onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))}
           />
           <Input
-            placeholder="Qty"
+            placeholder="Was price (optional)"
             type="number"
-            required
-            value={form.quantity}
+            value={form.compareAtPrice}
             onChange={(e) =>
-              setForm((f) => ({ ...f, quantity: e.target.value }))
+              setForm((f) => ({ ...f, compareAtPrice: e.target.value }))
             }
           />
         </div>
+        <p className="text-[11px] text-steel-500">
+          Optional “was” price shows struck-through on the card when higher than
+          the sale price.
+        </p>
+        <Input
+          placeholder="Qty"
+          type="number"
+          required
+          value={form.quantity}
+          onChange={(e) =>
+            setForm((f) => ({ ...f, quantity: e.target.value }))
+          }
+        />
         <select
           className="h-12 w-full rounded-xl border border-steel-200 px-3"
           value={form.condition}
@@ -268,14 +347,63 @@ export function NewListingPage() {
             setForm((f) => ({ ...f, partNumber: e.target.value }))
           }
         />
-        <Input
-          placeholder="Image URL"
-          value={form.imageUrl}
-          onChange={(e) =>
-            setForm((f) => ({ ...f, imageUrl: e.target.value }))
-          }
-        />
-        <Button type="submit" className="w-full" loading={loading}>
+
+        {/* Photos — minimum 3 required */}
+        <div className="space-y-2 rounded-2xl border border-steel-200 bg-white p-3">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <p className="text-sm font-bold text-steel-900">Product photos</p>
+              <p className="text-[11px] text-steel-500">
+                At least {MIN_IMAGES} images required · first is the main photo
+                ({filledImages.length}/{Math.max(MIN_IMAGES, images.length)})
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={addImageSlot}
+              disabled={images.length >= MAX_IMAGES}
+            >
+              Add more
+            </Button>
+          </div>
+
+          <div className="space-y-3">
+            {images.map((url, i) => (
+              <div key={i} className="relative">
+                <ImageUploadField
+                  label={`Photo ${i + 1}${i === 0 ? ' (primary)' : ''}`}
+                  required={i < MIN_IMAGES}
+                  value={url}
+                  onChange={(v) => setImageAt(i, v)}
+                />
+                {images.length > MIN_IMAGES && i >= MIN_IMAGES && (
+                  <button
+                    type="button"
+                    className="mt-1 text-xs font-semibold text-danger cursor-pointer"
+                    onClick={() => removeImageSlot(i)}
+                  >
+                    Remove photo {i + 1}
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+          {filledImages.length < MIN_IMAGES && (
+            <p className="text-xs font-medium text-amber-700">
+              Add {MIN_IMAGES - filledImages.length} more photo
+              {MIN_IMAGES - filledImages.length === 1 ? '' : 's'} to publish.
+            </p>
+          )}
+        </div>
+
+        <Button
+          type="submit"
+          className="w-full"
+          loading={loading}
+          disabled={filledImages.length < MIN_IMAGES}
+        >
           Publish listing
         </Button>
       </form>

@@ -14,6 +14,27 @@ export function formatTZS(amount: number | string) {
   }).format(n);
 }
 
+/** True when compare-at is a real higher list price (show strike + badge) */
+export function hasDiscount(
+  price: number | string,
+  compareAtPrice?: number | string | null,
+) {
+  if (compareAtPrice == null || compareAtPrice === '') return false;
+  const p = Number(price);
+  const c = Number(compareAtPrice);
+  return Number.isFinite(p) && Number.isFinite(c) && c > p;
+}
+
+export function discountPercent(
+  price: number | string,
+  compareAtPrice: number | string,
+) {
+  const p = Number(price);
+  const c = Number(compareAtPrice);
+  if (!c || c <= p) return 0;
+  return Math.round(((c - p) / c) * 100);
+}
+
 export function formatRelative(date: string | Date) {
   const d = typeof date === 'string' ? new Date(date) : date;
   const diff = Date.now() - d.getTime();

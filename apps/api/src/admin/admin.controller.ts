@@ -39,20 +39,30 @@ export class AdminController {
     return this.admin.setUserActive(id, body.isActive);
   }
 
+  @Get('sellers')
+  sellers(@Query('status') status?: string) {
+    return this.admin.listSellers(status);
+  }
+
   @Patch('sellers/:id/status')
   sellerStatus(
     @Param('id') id: string,
-    @Body() body: { status: ApprovalStatus },
+    @Body() body: { status: ApprovalStatus; reason?: string },
   ) {
-    return this.admin.approveSeller(id, body.status);
+    return this.admin.approveSeller(id, body.status, body.reason);
+  }
+
+  @Get('drivers')
+  drivers(@Query('status') status?: string) {
+    return this.admin.listDrivers(status);
   }
 
   @Patch('drivers/:id/status')
   driverStatus(
     @Param('id') id: string,
-    @Body() body: { status: ApprovalStatus },
+    @Body() body: { status: ApprovalStatus; reason?: string },
   ) {
-    return this.admin.approveDriver(id, body.status);
+    return this.admin.approveDriver(id, body.status, body.reason);
   }
 
   @Get('disputes')

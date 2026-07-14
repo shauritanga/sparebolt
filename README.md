@@ -45,6 +45,7 @@ sparebolt/
 | DB | PostgreSQL 16 + Prisma |
 | Payments | ClickPesa (mock auto-complete when keys absent) |
 | Maps | Leaflet (frontend-ready) |
+| Uploads | Local disk (`apps/api/uploads`) via `POST /api/uploads` (JWT); swap for S3/MinIO later |
 
 ---
 

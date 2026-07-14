@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -10,11 +9,8 @@ import {
   Truck,
   User,
 } from 'lucide-react';
-import { toast } from 'sonner';
-import { api } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth-store';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 
 export function AccountPage() {
   const { t } = useTranslation();
@@ -84,6 +80,43 @@ export function AccountPage() {
         <p className="text-sm text-bolt-100/80">{user.email || user.phone}</p>
       </div>
 
+      {user.sellerProfile?.status === 'PENDING' && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+          <p className="font-bold">Seller verification pending</p>
+          <p className="mt-1 text-amber-900/80">
+            Your documents are under review. You cannot list parts until an
+            admin approves your application.
+          </p>
+        </div>
+      )}
+      {user.sellerProfile?.status === 'REJECTED' && (
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-900">
+          <p className="font-bold">Seller application rejected</p>
+          <p className="mt-1">
+            {user.sellerProfile.rejectionReason ||
+              'Contact support for details.'}
+          </p>
+        </div>
+      )}
+      {user.driverProfile?.status === 'PENDING' && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+          <p className="font-bold">Driver verification pending</p>
+          <p className="mt-1 text-amber-900/80">
+            Your documents are under review. You cannot accept jobs until an
+            admin approves your application.
+          </p>
+        </div>
+      )}
+      {user.driverProfile?.status === 'REJECTED' && (
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-900">
+          <p className="font-bold">Driver application rejected</p>
+          <p className="mt-1">
+            {user.driverProfile.rejectionReason ||
+              'Contact support for details.'}
+          </p>
+        </div>
+      )}
+
       <ul className="overflow-hidden rounded-2xl border border-steel-200 bg-white shadow-sm">
         {links.map(({ to, icon: Icon, label }) => (
           <li key={to} className="border-b border-steel-100 last:border-0">
@@ -114,131 +147,5 @@ export function AccountPage() {
   );
 }
 
-export function BecomeSellerPage() {
-  const navigate = useNavigate();
-  const refreshMe = useAuthStore((s) => s.refreshMe);
-  const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({
-    businessName: '',
-    description: '',
-    city: 'Dar es Salaam',
-  });
-
-  return (
-    <div className="mx-auto max-w-md space-y-4">
-      <h1 className="font-display text-2xl font-extrabold">Become a seller</h1>
-      <form
-        className="space-y-3 rounded-2xl border border-steel-200 bg-white p-4"
-        onSubmit={(e) => {
-          e.preventDefault();
-          setLoading(true);
-          void api
-            .post('/auth/become-seller', form)
-            .then(async () => {
-              await refreshMe();
-              toast.success('Seller profile created');
-              void navigate('/seller');
-            })
-            .catch(() => toast.error('Failed'))
-            .finally(() => setLoading(false));
-        }}
-      >
-        <div>
-          <label className="mb-1 block text-xs font-semibold text-steel-600">
-            Business name
-          </label>
-          <Input
-            required
-            value={form.businessName}
-            onChange={(e) =>
-              setForm((s) => ({ ...s, businessName: e.target.value }))
-            }
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-xs font-semibold text-steel-600">
-            Description
-          </label>
-          <Input
-            value={form.description}
-            onChange={(e) =>
-              setForm((s) => ({ ...s, description: e.target.value }))
-            }
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-xs font-semibold text-steel-600">
-            City
-          </label>
-          <Input
-            required
-            value={form.city}
-            onChange={(e) => setForm((s) => ({ ...s, city: e.target.value }))}
-          />
-        </div>
-        <Button type="submit" className="w-full" loading={loading}>
-          Submit
-        </Button>
-      </form>
-    </div>
-  );
-}
-
-export function BecomeDriverPage() {
-  const navigate = useNavigate();
-  const refreshMe = useAuthStore((s) => s.refreshMe);
-  const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({
-    vehicleType: 'motorcycle',
-    vehiclePlate: '',
-    licenseNumber: '',
-    city: 'Dar es Salaam',
-  });
-
-  return (
-    <div className="mx-auto max-w-md space-y-4">
-      <h1 className="font-display text-2xl font-extrabold">Become a driver</h1>
-      <form
-        className="space-y-3 rounded-2xl border border-steel-200 bg-white p-4"
-        onSubmit={(e) => {
-          e.preventDefault();
-          setLoading(true);
-          void api
-            .post('/auth/become-driver', form)
-            .then(async () => {
-              await refreshMe();
-              toast.success('Driver profile created');
-              void navigate('/driver');
-            })
-            .catch(() => toast.error('Failed'))
-            .finally(() => setLoading(false));
-        }}
-      >
-        {(
-          [
-            ['vehicleType', 'Vehicle type (motorcycle/car/van)'],
-            ['vehiclePlate', 'Plate number'],
-            ['licenseNumber', 'License number'],
-            ['city', 'City'],
-          ] as const
-        ).map(([key, label]) => (
-          <div key={key}>
-            <label className="mb-1 block text-xs font-semibold text-steel-600">
-              {label}
-            </label>
-            <Input
-              required
-              value={form[key]}
-              onChange={(e) =>
-                setForm((s) => ({ ...s, [key]: e.target.value }))
-              }
-            />
-          </div>
-        ))}
-        <Button type="submit" className="w-full" loading={loading}>
-          Submit
-        </Button>
-      </form>
-    </div>
-  );
-}
+export { BecomeSellerPage } from '@/pages/become-seller';
+export { BecomeDriverPage } from '@/pages/become-driver';

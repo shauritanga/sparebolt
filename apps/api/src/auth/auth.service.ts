@@ -188,25 +188,98 @@ export class AuthService {
     });
     if (existing) throw new ConflictException('Already a seller');
 
+    if (
+      !dto.termsAccepted ||
+      !dto.dataConsent ||
+      !dto.accurateListingConsent
+    ) {
+      throw new BadRequestException(
+        'You must accept seller terms, data processing, and accurate listing consents',
+      );
+    }
+
+    if (dto.payoutMethod === 'mobile_money' && !dto.payoutPhone) {
+      throw new BadRequestException(
+        'Mobile money number is required for payout',
+      );
+    }
+    if (
+      dto.payoutMethod === 'bank' &&
+      (!dto.bankName || !dto.bankAccountNumber)
+    ) {
+      throw new BadRequestException(
+        'Bank name and account number are required',
+      );
+    }
+
+    if (
+      dto.businessType === 'company' &&
+      !dto.registrationNumber?.trim()
+    ) {
+      throw new BadRequestException(
+        'Business registration number is required for companies',
+      );
+    }
+
+    const now = new Date();
     const [profile] = await this.prisma.$transaction([
       this.prisma.sellerProfile.create({
         data: {
           userId,
           businessName: dto.businessName,
+          businessType: dto.businessType,
           description: dto.description,
+          registrationNumber: dto.registrationNumber,
+          tinNumber: dto.tinNumber,
+          yearsTrading: dto.yearsTrading,
+          legalFullName: dto.legalFullName,
+          nationalId: dto.nationalId,
+          nationalIdFrontUrl: dto.nationalIdFrontUrl,
+          nationalIdBackUrl: dto.nationalIdBackUrl,
+          selfieUrl: dto.selfieUrl,
+          dateOfBirth: dto.dateOfBirth ? new Date(dto.dateOfBirth) : null,
+          secondaryPhone: dto.secondaryPhone,
+          addressStreet: dto.addressStreet,
+          addressArea: dto.addressArea,
+          addressWard: dto.addressWard,
           city: dto.city,
           region: dto.region,
+          addressLandmark: dto.addressLandmark,
+          latitude: dto.latitude,
+          longitude: dto.longitude,
+          shopExteriorUrl: dto.shopExteriorUrl,
+          shopInteriorUrl: dto.shopInteriorUrl,
+          payoutMethod: dto.payoutMethod,
+          payoutPhone: dto.payoutPhone,
+          payoutAccountName: dto.payoutAccountName,
+          bankName: dto.bankName,
+          bankAccountNumber: dto.bankAccountNumber,
           licenseNumber: dto.licenseNumber,
-          status: 'APPROVED', // auto-approve for MVP; admin can moderate later
+          termsAcceptedAt: now,
+          dataConsentAt: now,
+          accurateListingAt: now,
+          status: 'PENDING',
         },
       }),
       this.prisma.user.update({
         where: { id: userId },
         data: { role: Role.SELLER },
       }),
+      this.prisma.notification.create({
+        data: {
+          userId,
+          type: 'APPROVAL',
+          title: 'Seller application received',
+          body: 'Your documents are under review. You can list parts after approval.',
+        },
+      }),
     ]);
 
-    return profile;
+    return {
+      ...profile,
+      message:
+        'Application submitted. Admin will verify your identity and shop before you can sell.',
+    };
   }
 
   async registerDriver(userId: string, dto: RegisterDriverDto) {
@@ -215,24 +288,99 @@ export class AuthService {
     });
     if (existing) throw new ConflictException('Already a driver');
 
+    if (!dto.termsAccepted || !dto.dataConsent || !dto.trackingConsent) {
+      throw new BadRequestException(
+        'You must accept terms, data processing, and location tracking consents',
+      );
+    }
+
+    if (dto.payoutMethod === 'mobile_money' && !dto.payoutPhone) {
+      throw new BadRequestException(
+        'Mobile money number is required for payout',
+      );
+    }
+    if (
+      dto.payoutMethod === 'bank' &&
+      (!dto.bankName || !dto.bankAccountNumber)
+    ) {
+      throw new BadRequestException(
+        'Bank name and account number are required',
+      );
+    }
+
+    const now = new Date();
     const [profile] = await this.prisma.$transaction([
       this.prisma.driverProfile.create({
         data: {
           userId,
-          vehicleType: dto.vehicleType,
-          vehiclePlate: dto.vehiclePlate,
-          licenseNumber: dto.licenseNumber,
+          legalFullName: dto.legalFullName,
+          nationalId: dto.nationalId,
+          nationalIdFrontUrl: dto.nationalIdFrontUrl,
+          nationalIdBackUrl: dto.nationalIdBackUrl,
+          selfieUrl: dto.selfieUrl,
+          dateOfBirth: dto.dateOfBirth ? new Date(dto.dateOfBirth) : null,
+          secondaryPhone: dto.secondaryPhone,
+          addressStreet: dto.addressStreet,
+          addressArea: dto.addressArea,
+          addressWard: dto.addressWard,
           city: dto.city,
-          status: 'APPROVED',
+          addressLandmark: dto.addressLandmark,
+          homeLatitude: dto.homeLatitude,
+          homeLongitude: dto.homeLongitude,
+          vehicleType: dto.vehicleType,
+          vehiclePlate: dto.vehiclePlate.toUpperCase().trim(),
+          vehicleMake: dto.vehicleMake,
+          vehicleModel: dto.vehicleModel,
+          vehicleColor: dto.vehicleColor,
+          vehicleYear: dto.vehicleYear,
+          vehiclePhotoSideUrl: dto.vehiclePhotoSideUrl,
+          vehiclePhotoRearUrl: dto.vehiclePhotoRearUrl,
+          vehiclePhotoWithDriverUrl: dto.vehiclePhotoWithDriverUrl,
+          licenseNumber: dto.licenseNumber,
+          licenseClass: dto.licenseClass,
+          licensePhotoUrl: dto.licensePhotoUrl,
+          insuranceDocUrl: dto.insuranceDocUrl,
+          insuranceExpiresAt: dto.insuranceExpiresAt
+            ? new Date(dto.insuranceExpiresAt)
+            : null,
+          payoutMethod: dto.payoutMethod,
+          payoutPhone: dto.payoutPhone,
+          payoutAccountName: dto.payoutAccountName,
+          bankName: dto.bankName,
+          bankAccountNumber: dto.bankAccountNumber,
+          emergencyName: dto.emergencyName,
+          emergencyPhone: dto.emergencyPhone,
+          emergencyRelation: dto.emergencyRelation,
+          guarantorName: dto.guarantorName,
+          guarantorPhone: dto.guarantorPhone,
+          guarantorIdNumber: dto.guarantorIdNumber,
+          guarantorAddress: dto.guarantorAddress,
+          termsAcceptedAt: now,
+          dataConsentAt: now,
+          trackingConsentAt: now,
+          // Pending admin document verification before jobs
+          status: 'PENDING',
         },
       }),
       this.prisma.user.update({
         where: { id: userId },
         data: { role: Role.DRIVER },
       }),
+      this.prisma.notification.create({
+        data: {
+          userId,
+          type: 'APPROVAL',
+          title: 'Driver application received',
+          body: 'Your documents are under review. You can accept jobs after approval.',
+        },
+      }),
     ]);
 
-    return profile;
+    return {
+      ...profile,
+      message:
+        'Application submitted. Admin will verify your ID and vehicle before you can take jobs.',
+    };
   }
 
   async me(userId: string) {

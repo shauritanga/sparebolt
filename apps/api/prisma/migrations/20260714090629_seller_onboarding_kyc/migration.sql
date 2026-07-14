@@ -1,0 +1,30 @@
+-- AlterTable
+ALTER TABLE "seller_profiles" ADD COLUMN     "accurateListingAt" TIMESTAMP(3),
+ADD COLUMN     "addressArea" TEXT,
+ADD COLUMN     "addressLandmark" TEXT,
+ADD COLUMN     "addressStreet" TEXT,
+ADD COLUMN     "addressWard" TEXT,
+ADD COLUMN     "bankAccountNumber" TEXT,
+ADD COLUMN     "bankName" TEXT,
+ADD COLUMN     "businessType" TEXT,
+ADD COLUMN     "dataConsentAt" TIMESTAMP(3),
+ADD COLUMN     "dateOfBirth" TIMESTAMP(3),
+ADD COLUMN     "legalFullName" TEXT,
+ADD COLUMN     "nationalId" TEXT,
+ADD COLUMN     "nationalIdBackUrl" TEXT,
+ADD COLUMN     "nationalIdFrontUrl" TEXT,
+ADD COLUMN     "payoutAccountName" TEXT,
+ADD COLUMN     "payoutMethod" TEXT,
+ADD COLUMN     "payoutPhone" TEXT,
+ADD COLUMN     "registrationNumber" TEXT,
+ADD COLUMN     "rejectionReason" TEXT,
+ADD COLUMN     "secondaryPhone" TEXT,
+ADD COLUMN     "selfieUrl" TEXT,
+ADD COLUMN     "shopExteriorUrl" TEXT,
+ADD COLUMN     "shopInteriorUrl" TEXT,
+ADD COLUMN     "termsAcceptedAt" TIMESTAMP(3),
+ADD COLUMN     "tinNumber" TEXT,
+ADD COLUMN     "yearsTrading" INTEGER;
+
+-- CreateIndex
+CREATE INDEX "seller_profiles_nationalId_idx" ON "seller_profiles"("nationalId");

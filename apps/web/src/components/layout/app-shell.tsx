@@ -34,9 +34,11 @@ export function AppShell() {
     };
   }, [refreshMe]);
 
+  // Hide bottom nav on auth, checkout, and product detail (mobile action bar)
   const hideNav =
     location.pathname.startsWith('/auth') ||
-    location.pathname.startsWith('/checkout');
+    location.pathname.startsWith('/checkout') ||
+    location.pathname.startsWith('/parts/');
 
   const toggleLang = () => {
     const next = i18n.language === 'en' ? 'sw' : 'en';

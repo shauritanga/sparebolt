@@ -1,11 +1,17 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateListingDto, SearchListingsDto, UpdateListingDto } from './dto/listings.dto';
+import {
+  CreateListingDto,
+  MIN_LISTING_IMAGES,
+  SearchListingsDto,
+  UpdateListingDto,
+} from './dto/listings.dto';
 
 @Injectable()
 export class ListingsService {
@@ -103,6 +109,22 @@ export class ListingsService {
     return listing;
   }
 
+  private normalizeImageUrls(images: string[]) {
+    const cleaned = [
+      ...new Set(
+        images
+          .map((u) => u?.trim())
+          .filter((u): u is string => Boolean(u && u.length > 0)),
+      ),
+    ];
+    if (cleaned.length < MIN_LISTING_IMAGES) {
+      throw new BadRequestException(
+        `At least ${MIN_LISTING_IMAGES} product images are required`,
+      );
+    }
+    return cleaned;
+  }
+
   async create(userId: string, dto: CreateListingDto) {
     const seller = await this.prisma.sellerProfile.findUnique({
       where: { userId },
@@ -110,6 +132,8 @@ export class ListingsService {
     if (!seller || seller.status !== 'APPROVED') {
       throw new ForbiddenException('Approved seller profile required');
     }
+
+    const imageUrls = this.normalizeImageUrls(dto.images);
 
     return this.prisma.listing.create({
       data: {
@@ -120,7 +144,16 @@ export class ListingsService {
         partNumber: dto.partNumber,
         condition: dto.condition,
         price: dto.price,
+        compareAtPrice:
+          dto.compareAtPrice != null && dto.compareAtPrice > dto.price
+            ? dto.compareAtPrice
+            : null,
         quantity: dto.quantity,
+        manufacturer: dto.manufacturer,
+        brand: dto.brand,
+        partType: dto.partType,
+        engine: dto.engine,
+        warrantyMonths: dto.warrantyMonths,
         make: dto.make,
         model: dto.model,
         yearFrom: dto.yearFrom,
@@ -128,15 +161,13 @@ export class ListingsService {
         city: dto.city || seller.city,
         latitude: dto.latitude ?? seller.latitude,
         longitude: dto.longitude ?? seller.longitude,
-        images: dto.images?.length
-          ? {
-              create: dto.images.map((url, i) => ({
-                url,
-                sortOrder: i,
-                isPrimary: i === 0,
-              })),
-            }
-          : undefined,
+        images: {
+          create: imageUrls.map((url, i) => ({
+            url,
+            sortOrder: i,
+            isPrimary: i === 0,
+          })),
+        },
       },
       include: { images: true, category: true },
     });
@@ -144,6 +175,22 @@ export class ListingsService {
 
   async update(userId: string, id: string, dto: UpdateListingDto) {
     const listing = await this.getOwnedListing(userId, id);
+
+    if (dto.images) {
+      const imageUrls = this.normalizeImageUrls(dto.images);
+      await this.prisma.$transaction([
+        this.prisma.listingImage.deleteMany({ where: { listingId: id } }),
+        this.prisma.listingImage.createMany({
+          data: imageUrls.map((url, i) => ({
+            listingId: id,
+            url,
+            sortOrder: i,
+            isPrimary: i === 0,
+          })),
+        }),
+      ]);
+    }
+
     return this.prisma.listing.update({
       where: { id: listing.id },
       data: {
@@ -152,7 +199,18 @@ export class ListingsService {
         partNumber: dto.partNumber,
         condition: dto.condition,
         price: dto.price,
+        compareAtPrice:
+          dto.compareAtPrice === null
+            ? null
+            : dto.compareAtPrice !== undefined
+              ? dto.compareAtPrice
+              : undefined,
         quantity: dto.quantity,
+        manufacturer: dto.manufacturer,
+        brand: dto.brand,
+        partType: dto.partType,
+        engine: dto.engine,
+        warrantyMonths: dto.warrantyMonths,
         make: dto.make,
         model: dto.model,
         yearFrom: dto.yearFrom,

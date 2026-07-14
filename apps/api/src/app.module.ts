@@ -10,6 +10,7 @@ import { AdminModule } from './admin/admin.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { SellerModule } from './seller/seller.module';
 import { AdsModule } from './ads/ads.module';
+import { UploadsModule } from './uploads/uploads.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -26,6 +27,7 @@ import { AppService } from './app.service';
     NotificationsModule,
     SellerModule,
     AdsModule,
+    UploadsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

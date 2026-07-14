@@ -5,6 +5,7 @@ import { api } from '@/lib/api';
 import { formatTZS } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { useAuthStore } from '@/stores/auth-store';
 
 type Job = {
   id: string;
@@ -20,6 +21,7 @@ type Job = {
 };
 
 export function DriverPage() {
+  const driverProfile = useAuthStore((s) => s.user?.driverProfile);
   const [available, setAvailable] = useState<Job[]>([]);
   const [mine, setMine] = useState<Job[]>([]);
   const [earnings, setEarnings] = useState<{
@@ -32,7 +34,10 @@ export function DriverPage() {
     'available',
   );
 
+  const approved = driverProfile?.status === 'APPROVED';
+
   const load = () => {
+    if (!approved) return;
     void api.get('/driver/jobs/available').then((r) => setAvailable(r.data));
     void api.get('/driver/jobs').then((r) => setMine(r.data));
     void api.get('/driver/earnings').then((r) => setEarnings(r.data));
@@ -40,9 +45,11 @@ export function DriverPage() {
 
   useEffect(() => {
     load();
+    if (!approved) return;
     const iv = setInterval(load, 8000);
     return () => clearInterval(iv);
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [approved]);
 
   const toggleOnline = async () => {
     const next = !online;
@@ -78,6 +85,28 @@ export function DriverPage() {
       toast.error('Update failed');
     }
   };
+
+  if (driverProfile && !approved) {
+    return (
+      <div className="mx-auto max-w-lg space-y-4 py-8 text-center">
+        <h1 className="font-display text-2xl font-extrabold">Driver</h1>
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-left">
+          <Badge variant="warning">{driverProfile.status}</Badge>
+          <p className="mt-3 font-semibold text-steel-900">
+            {driverProfile.status === 'PENDING'
+              ? 'Your application is under review'
+              : 'You cannot accept jobs right now'}
+          </p>
+          <p className="mt-2 text-sm text-steel-600">
+            {driverProfile.status === 'PENDING'
+              ? 'An admin must verify your ID, vehicle, and licence before you go online.'
+              : driverProfile.rejectionReason ||
+                'Contact support if you believe this is an error.'}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-lg space-y-4">

@@ -167,14 +167,54 @@ model PushToken {
 model SellerProfile {
   id             String         @id @default(cuid())
   userId         String         @unique
+
+  // ── Business ──
   businessName   String
+  businessType   String?        // individual | partnership | company
   description    String?
+  registrationNumber String?    // BRELA / company reg
+  tinNumber      String?
+  yearsTrading   Int?
+
+  // ── Identity of responsible person ──
+  legalFullName      String?
+  nationalId         String?
+  nationalIdFrontUrl String?
+  nationalIdBackUrl  String?
+  selfieUrl          String?
+  dateOfBirth        DateTime?
+  secondaryPhone     String?
+
+  // ── Location ──
+  addressStreet  String?
+  addressArea    String?
+  addressWard    String?
   city           String
   region         String?
+  addressLandmark String?
   latitude       Float?
   longitude      Float?
+  shopExteriorUrl String?
+  shopInteriorUrl String?
+
+  // ── Payout (must match ID / business name) ──
+  payoutMethod      String?     // mobile_money | bank
+  payoutPhone       String?
+  payoutAccountName String?
+  bankName          String?
+  bankAccountNumber String?
+
+  // ── Legacy / optional trade licence ──
   licenseNumber  String?
+
+  // ── Consents ──
+  termsAcceptedAt   DateTime?
+  dataConsentAt     DateTime?
+  accurateListingAt DateTime?
+
+  // ── Ops ──
   status         ApprovalStatus @default(PENDING)
+  rejectionReason String?
   ratingAvg      Float          @default(0)
   ratingCount    Int            @default(0)
   totalSales     Int            @default(0)
@@ -188,21 +228,78 @@ model SellerProfile {
   promos   PromoAd[]
 
   @@index([status, city])
+  @@index([nationalId])
   @@map("seller_profiles")
 }
 
 model DriverProfile {
   id              String         @id @default(cuid())
   userId          String         @unique
+
+  // ── Identity (theft / fraud trail) ──
+  legalFullName     String?
+  nationalId        String?
+  nationalIdFrontUrl String?
+  nationalIdBackUrl  String?
+  selfieUrl         String?
+  dateOfBirth       DateTime?
+  secondaryPhone    String?
+
+  // ── Residential address ──
+  addressStreet   String?
+  addressArea     String?
+  addressWard     String?
+  city            String
+  addressLandmark String?
+  homeLatitude    Float?
+  homeLongitude   Float?
+
+  // ── Vehicle ──
   vehicleType     String         // motorcycle | car | van
   vehiclePlate    String
+  vehicleMake     String?
+  vehicleModel    String?
+  vehicleColor    String?
+  vehicleYear     Int?
+  vehiclePhotoSideUrl       String?
+  vehiclePhotoRearUrl       String?
+  vehiclePhotoWithDriverUrl String?
+
+  // ── Licence & insurance ──
   licenseNumber   String
+  licenseClass    String?
+  licensePhotoUrl String?
   licenseVerified Boolean        @default(false)
-  city            String
+  insuranceDocUrl String?
+  insuranceExpiresAt DateTime?
+
+  // ── Payout (must match ID name) ──
+  payoutMethod      String?      // mobile_money | bank
+  payoutPhone       String?
+  payoutAccountName String?
+  bankName          String?
+  bankAccountNumber String?
+
+  // ── Emergency + guarantor ──
+  emergencyName     String?
+  emergencyPhone    String?
+  emergencyRelation String?
+  guarantorName     String?
+  guarantorPhone    String?
+  guarantorIdNumber String?
+  guarantorAddress  String?
+
+  // ── Consents ──
+  termsAcceptedAt   DateTime?
+  dataConsentAt     DateTime?
+  trackingConsentAt DateTime?
+
+  // ── Ops ──
   latitude        Float?
   longitude       Float?
   isOnline        Boolean        @default(false)
   status          ApprovalStatus @default(PENDING)
+  rejectionReason String?
   ratingAvg       Float          @default(0)
   ratingCount     Int            @default(0)
   totalDeliveries Int            @default(0)
@@ -214,6 +311,8 @@ model DriverProfile {
   reviews    Review[]    @relation("DriverReviews")
 
   @@index([status, isOnline, city])
+  @@index([nationalId])
+  @@index([vehiclePlate])
   @@map("driver_profiles")
 }
 
@@ -282,9 +381,17 @@ model Listing {
   partNumber  String?
   condition   PartCondition @default(NEW)
   price       Decimal       @db.Decimal(12, 2)
+  /// Previous / list price for strikethrough UI when higher than price
+  compareAtPrice Decimal?   @db.Decimal(12, 2)
   currency    String        @default("TZS")
   quantity    Int           @default(1)
   isActive    Boolean       @default(true)
+  // Specs / catalog details
+  manufacturer String?      // e.g. Toyota OEM, Bosch
+  brand        String?      // marketing brand
+  partType     String?      // Genuine | Aftermarket | OEM
+  engine       String?      // e.g. 1KD-FTV, 4.5
+  warrantyMonths Int?
   // Vehicle compatibility
   make        String?
   model       String?

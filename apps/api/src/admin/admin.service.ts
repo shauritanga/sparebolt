@@ -80,21 +80,111 @@ export class AdminService {
     });
   }
 
-  async approveSeller(sellerId: string, status: ApprovalStatus) {
-    return this.prisma.sellerProfile.update({
-      where: { id: sellerId },
-      data: { status },
+  async listSellers(status?: string) {
+    return this.prisma.sellerProfile.findMany({
+      where: status ? { status: status as ApprovalStatus } : undefined,
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            phone: true,
+            email: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
     });
   }
 
-  async approveDriver(driverId: string, status: ApprovalStatus) {
-    return this.prisma.driverProfile.update({
+  async approveSeller(
+    sellerId: string,
+    status: ApprovalStatus,
+    rejectionReason?: string,
+  ) {
+    const profile = await this.prisma.sellerProfile.update({
+      where: { id: sellerId },
+      data: {
+        status,
+        rejectionReason:
+          status === 'REJECTED' ? rejectionReason || 'Rejected by admin' : null,
+      },
+    });
+
+    await this.prisma.notification.create({
+      data: {
+        userId: profile.userId,
+        type: 'APPROVAL',
+        title:
+          status === 'APPROVED'
+            ? 'Seller account approved'
+            : status === 'REJECTED'
+              ? 'Seller application rejected'
+              : `Seller status: ${status}`,
+        body:
+          status === 'APPROVED'
+            ? 'You can now create listings and sell parts.'
+            : rejectionReason || `Your seller status is now ${status}`,
+      },
+    });
+
+    return profile;
+  }
+
+  async listDrivers(status?: string) {
+    return this.prisma.driverProfile.findMany({
+      where: status ? { status: status as ApprovalStatus } : undefined,
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            phone: true,
+            email: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+    });
+  }
+
+  async approveDriver(
+    driverId: string,
+    status: ApprovalStatus,
+    rejectionReason?: string,
+  ) {
+    const profile = await this.prisma.driverProfile.update({
       where: { id: driverId },
       data: {
         status,
         licenseVerified: status === 'APPROVED',
+        rejectionReason:
+          status === 'REJECTED' ? rejectionReason || 'Rejected by admin' : null,
       },
     });
+
+    await this.prisma.notification.create({
+      data: {
+        userId: profile.userId,
+        type: 'APPROVAL',
+        title:
+          status === 'APPROVED'
+            ? 'Driver account approved'
+            : status === 'REJECTED'
+              ? 'Driver application rejected'
+              : `Driver status: ${status}`,
+        body:
+          status === 'APPROVED'
+            ? 'You can now go online and accept delivery jobs.'
+            : rejectionReason || `Your driver status is now ${status}`,
+      },
+    });
+
+    return profile;
   }
 
   async listDisputes() {

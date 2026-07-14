@@ -22,8 +22,10 @@ export function SafeImage({
   ...props
 }: SafeImageProps) {
   const [failed, setFailed] = useState(false);
+  // Relative /uploads paths work via Vite proxy in dev
+  const primary = src || undefined;
   const resolved =
-    !src || failed || src === fallbackSrc ? fallbackSrc : src;
+    !primary || failed || primary === fallbackSrc ? fallbackSrc : primary;
 
   return (
     <img
