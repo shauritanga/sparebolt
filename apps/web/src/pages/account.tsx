@@ -1,136 +1,412 @@
+import type { ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
+  Bell,
   ChevronRight,
+  HelpCircle,
+  Languages,
   LayoutDashboard,
   LogOut,
+  Mail,
+  Moon,
   Package,
+  Phone,
+  ShoppingCart,
   Store,
+  Sun,
   Truck,
   User,
+  UserRound,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
+import { useCartStore } from '@/stores/cart-store';
+import { useTheme } from '@/hooks/use-theme';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+
+const SUPPORT_EMAIL = 'support@ditronics.co.tz';
+const COPYRIGHT_YEAR = new Date().getFullYear();
+
+type MenuRow = {
+  key: string;
+  label: string;
+  icon: typeof Package;
+  to?: string;
+  onClick?: () => void;
+  trailing?: ReactNode;
+  hint?: string;
+};
+
+function MenuSection({
+  title,
+  rows,
+}: {
+  title?: string;
+  rows: MenuRow[];
+}) {
+  if (!rows.length) return null;
+  return (
+    <div className="space-y-2">
+      {title && (
+        <p className="px-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+          {title}
+        </p>
+      )}
+      <ul className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+        {rows.map(({ key, to, icon: Icon, label, onClick, trailing, hint }) => {
+          const interactive = Boolean(to || onClick);
+          const body = (
+            <>
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent-soft-foreground">
+                <Icon className="h-4 w-4" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block font-semibold text-foreground">
+                  {label}
+                </span>
+                {hint && (
+                  <span className="block text-xs text-muted-foreground">
+                    {hint}
+                  </span>
+                )}
+              </span>
+              {trailing}
+              {interactive && (
+                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+              )}
+            </>
+          );
+
+          const className = cn(
+            'flex min-h-[52px] w-full items-center gap-3 px-4 py-3.5 text-left transition',
+            interactive && 'hover:bg-muted',
+          );
+
+          return (
+            <li key={key} className="border-b border-border last:border-0">
+              {to ? (
+                <Link to={to} className={className}>
+                  {body}
+                </Link>
+              ) : onClick ? (
+                <button
+                  type="button"
+                  onClick={onClick}
+                  className={cn(className, 'cursor-pointer')}
+                >
+                  {body}
+                </button>
+              ) : (
+                <div className={className}>{body}</div>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
+function AccountFooter() {
+  return (
+    <footer className="pt-2 pb-1 text-center">
+      <p className="text-xs text-muted-foreground">
+        © {COPYRIGHT_YEAR} Ditronics
+      </p>
+      <p className="mt-0.5 text-[11px] text-muted-foreground/80">
+        SpareBolt · All rights reserved
+      </p>
+    </footer>
+  );
+}
 
 export function AccountPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
+  const cartCount = useCartStore((s) => s.totalItems());
+  const { isDark, toggleTheme } = useTheme();
+
+  const toggleLang = () => {
+    const next = i18n.language === 'en' ? 'sw' : 'en';
+    void i18n.changeLanguage(next);
+    localStorage.setItem('sb_locale', next);
+  };
 
   if (!user) {
     return (
-      <div className="mx-auto max-w-md space-y-4 py-12 text-center">
-        <User className="mx-auto h-12 w-12 text-muted-foreground" />
-        <h1 className="font-display text-xl font-bold">{t('account')}</h1>
-        <p className="text-sm text-muted-foreground">
-          Log in to track orders, sell parts, or deliver.
-        </p>
-        <div className="flex justify-center gap-2">
-          <Button asChild>
-            <Link to="/auth/login">{t('login')}</Link>
-          </Button>
-          <Button variant="secondary" asChild>
-            <Link to="/auth/register">{t('register')}</Link>
-          </Button>
+      <div className="mx-auto flex max-w-md flex-col gap-5 py-10">
+        <div className="space-y-4 text-center">
+          <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-muted">
+            <User className="h-7 w-7 text-muted-foreground" />
+          </span>
+          <div>
+            <h1 className="font-display text-xl font-bold">{t('account')}</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {t('accountGuestHint')}
+            </p>
+          </div>
+          <div className="flex justify-center gap-2">
+            <Button asChild>
+              <Link to="/auth/login">{t('login')}</Link>
+            </Button>
+            <Button variant="secondary" asChild>
+              <Link to="/auth/register">{t('register')}</Link>
+            </Button>
+          </div>
         </div>
+
+        <MenuSection
+          title={t('preferences')}
+          rows={[
+            {
+              key: 'lang',
+              label: t('language'),
+              icon: Languages,
+              onClick: toggleLang,
+              hint: i18n.language === 'en' ? 'English' : 'Kiswahili',
+              trailing: (
+                <span className="rounded-lg bg-muted px-2 py-1 text-[11px] font-bold uppercase text-muted-foreground">
+                  {i18n.language === 'en' ? 'EN' : 'SW'}
+                </span>
+              ),
+            },
+            {
+              key: 'theme',
+              label: t('appearance'),
+              icon: isDark ? Moon : Sun,
+              onClick: toggleTheme,
+              hint: isDark ? t('darkMode') : t('lightMode'),
+              trailing: isDark ? (
+                <Moon className="h-4 w-4 text-muted-foreground" />
+              ) : (
+                <Sun className="h-4 w-4 text-muted-foreground" />
+              ),
+            },
+          ]}
+        />
+
+        <MenuSection
+          title={t('support')}
+          rows={[
+            {
+              key: 'help',
+              label: t('helpSupport'),
+              icon: HelpCircle,
+              onClick: () => {
+                window.location.href = `mailto:${SUPPORT_EMAIL}?subject=SpareBolt%20Support`;
+              },
+              hint: SUPPORT_EMAIL,
+            },
+          ]}
+        />
+
+        <AccountFooter />
       </div>
     );
   }
 
-  const links: { to: string; icon: typeof Package; label: string }[] = [
-    { to: '/orders', icon: Package, label: t('orders') },
+  const initials = `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}`.toUpperCase() || 'SB';
+
+  const shopping: MenuRow[] = [
+    {
+      key: 'orders',
+      label: t('orders'),
+      icon: Package,
+      to: '/orders',
+      hint: t('ordersHint'),
+    },
+    {
+      key: 'cart',
+      label: t('cart'),
+      icon: ShoppingCart,
+      to: '/cart',
+      hint: cartCount > 0 ? t('cartItems', { count: cartCount }) : t('cartEmptyShort'),
+      trailing:
+        cartCount > 0 ? (
+          <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-signal px-1.5 text-[10px] font-bold text-steel-950">
+            {cartCount}
+          </span>
+        ) : undefined,
+    },
+    {
+      key: 'notifications',
+      label: t('notifications'),
+      icon: Bell,
+      to: '/notifications',
+      hint: t('notificationsHint'),
+    },
   ];
 
+  const earn: MenuRow[] = [];
   if (user.role === 'SELLER' || user.role === 'ADMIN') {
-    links.push(
-      { to: '/seller', icon: Store, label: t('dashboard') },
-      { to: '/seller/listings', icon: Package, label: t('myListings') },
+    earn.push(
+      {
+        key: 'seller-dash',
+        label: t('dashboard'),
+        icon: Store,
+        to: '/seller',
+        hint: t('sellerDashHint'),
+      },
+      {
+        key: 'listings',
+        label: t('myListings'),
+        icon: Package,
+        to: '/seller/listings',
+      },
     );
   } else {
-    links.push({
-      to: '/account/become-seller',
-      icon: Store,
+    earn.push({
+      key: 'become-seller',
       label: t('becomeSeller'),
+      icon: Store,
+      to: '/account/become-seller',
+      hint: t('becomeSellerHint'),
     });
   }
 
   if (user.role === 'DRIVER' || user.role === 'ADMIN') {
-    links.push({ to: '/driver', icon: Truck, label: t('jobs') });
-  } else {
-    links.push({
-      to: '/account/become-driver',
+    earn.push({
+      key: 'driver',
+      label: t('jobs'),
       icon: Truck,
+      to: '/driver',
+      hint: t('driverJobsHint'),
+    });
+  } else {
+    earn.push({
+      key: 'become-driver',
       label: t('becomeDriver'),
+      icon: Truck,
+      to: '/account/become-driver',
+      hint: t('becomeDriverHint'),
     });
   }
 
   if (user.role === 'ADMIN') {
-    links.push({ to: '/admin', icon: LayoutDashboard, label: 'Admin' });
+    earn.push({
+      key: 'admin',
+      label: 'Admin console',
+      icon: LayoutDashboard,
+      to: '/admin',
+      hint: 'Platform management',
+    });
   }
+
+  const preferences: MenuRow[] = [
+    {
+      key: 'lang',
+      label: t('language'),
+      icon: Languages,
+      onClick: toggleLang,
+      hint: i18n.language === 'en' ? 'English' : 'Kiswahili',
+      trailing: (
+        <span className="rounded-lg bg-muted px-2 py-1 text-[11px] font-bold uppercase text-muted-foreground">
+          {i18n.language === 'en' ? 'EN' : 'SW'}
+        </span>
+      ),
+    },
+    {
+      key: 'theme',
+      label: t('appearance'),
+      icon: isDark ? Moon : Sun,
+      onClick: toggleTheme,
+      hint: isDark ? t('darkMode') : t('lightMode'),
+    },
+  ];
+
+  const support: MenuRow[] = [
+    {
+      key: 'profile',
+      label: t('personalDetails'),
+      icon: UserRound,
+      hint:
+        [user.email, user.phone].filter(Boolean).join(' · ') || t('noContact'),
+    },
+    {
+      key: 'help',
+      label: t('helpSupport'),
+      icon: HelpCircle,
+      onClick: () => {
+        window.location.href = `mailto:${SUPPORT_EMAIL}?subject=SpareBolt%20Support`;
+      },
+      hint: SUPPORT_EMAIL,
+    },
+  ];
 
   return (
     <div className="mx-auto max-w-md space-y-5">
-      <div className="rounded-3xl border border-border bg-gradient-to-br from-bolt-800 to-steel-900 p-5 text-white shadow-md">
-        <p className="text-xs font-bold uppercase tracking-wider text-bolt-200">
-          {user.role}
-        </p>
-        <h1 className="font-display text-2xl font-extrabold">
-          {user.firstName} {user.lastName}
-        </h1>
-        <p className="text-sm text-bolt-100/80">{user.email || user.phone}</p>
+      {/* Profile card */}
+      <div className="relative overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-bolt-800 to-steel-900 p-5 text-white shadow-md">
+        <div className="flex items-start gap-3">
+          <span
+            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/15 text-lg font-extrabold tracking-wide text-white ring-2 ring-white/20"
+            aria-hidden
+          >
+            {initials}
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-bolt-200">
+              {user.role}
+            </p>
+            <h1 className="font-display text-xl font-extrabold leading-tight sm:text-2xl">
+              {user.firstName} {user.lastName}
+            </h1>
+            <div className="mt-1.5 space-y-0.5 text-sm text-bolt-100/85">
+              {user.email && (
+                <p className="flex items-center gap-1.5 truncate">
+                  <Mail className="h-3.5 w-3.5 shrink-0 opacity-80" />
+                  <span className="truncate">{user.email}</span>
+                </p>
+              )}
+              {user.phone && (
+                <p className="flex items-center gap-1.5 truncate">
+                  <Phone className="h-3.5 w-3.5 shrink-0 opacity-80" />
+                  <span className="truncate">{user.phone}</span>
+                </p>
+              )}
+              {!user.email && !user.phone && (
+                <p className="text-bolt-100/70">{t('noContact')}</p>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
 
       {user.sellerProfile?.status === 'PENDING' && (
         <div className="panel-warning p-4 text-sm">
-          <p className="font-bold">Seller verification pending</p>
-          <p className="mt-1 opacity-80">
-            Your documents are under review. You cannot list parts until an
-            admin approves your application.
-          </p>
+          <p className="font-bold">{t('sellerPendingTitle')}</p>
+          <p className="mt-1 opacity-80">{t('sellerPendingBody')}</p>
         </div>
       )}
       {user.sellerProfile?.status === 'REJECTED' && (
         <div className="panel-danger p-4 text-sm">
-          <p className="font-bold">Seller application rejected</p>
+          <p className="font-bold">{t('sellerRejectedTitle')}</p>
           <p className="mt-1 opacity-80">
-            {user.sellerProfile.rejectionReason ||
-              'Contact support for details.'}
+            {user.sellerProfile.rejectionReason || t('contactSupport')}
           </p>
         </div>
       )}
       {user.driverProfile?.status === 'PENDING' && (
         <div className="panel-warning p-4 text-sm">
-          <p className="font-bold">Driver verification pending</p>
-          <p className="mt-1 opacity-80">
-            Your documents are under review. You cannot accept jobs until an
-            admin approves your application.
-          </p>
+          <p className="font-bold">{t('driverPendingTitle')}</p>
+          <p className="mt-1 opacity-80">{t('driverPendingBody')}</p>
         </div>
       )}
       {user.driverProfile?.status === 'REJECTED' && (
         <div className="panel-danger p-4 text-sm">
-          <p className="font-bold">Driver application rejected</p>
+          <p className="font-bold">{t('driverRejectedTitle')}</p>
           <p className="mt-1 opacity-80">
-            {user.driverProfile.rejectionReason ||
-              'Contact support for details.'}
+            {user.driverProfile.rejectionReason || t('contactSupport')}
           </p>
         </div>
       )}
 
-      <ul className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-        {links.map(({ to, icon: Icon, label }) => (
-          <li key={to} className="border-b border-border last:border-0">
-            <Link
-              to={to}
-              className="flex min-h-[52px] items-center gap-3 px-4 py-3.5 transition hover:bg-muted"
-            >
-              <Icon className="h-5 w-5 text-bolt-700 dark:text-bolt-300" />
-              <span className="flex-1 font-semibold text-foreground">{label}</span>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            </Link>
-          </li>
-        ))}
-      </ul>
+      <MenuSection title={t('shopping')} rows={shopping} />
+      <MenuSection title={t('earnWithUs')} rows={earn} />
+      <MenuSection title={t('preferences')} rows={preferences} />
+      <MenuSection title={t('support')} rows={support} />
 
       <Button
         variant="secondary"
@@ -143,6 +419,8 @@ export function AccountPage() {
         <LogOut className="h-4 w-4" />
         {t('logout')}
       </Button>
+
+      <AccountFooter />
     </div>
   );
 }
