@@ -38,6 +38,23 @@ export function AppShell() {
     };
   }, [refreshMe]);
 
+  // Register FCM web push once the user is authenticated
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    void import('@/lib/push').then(({ registerWebPush }) => {
+      if (cancelled) return;
+      void registerWebPush().then((res) => {
+        if (!res.ok && res.reason && res.reason !== 'permission-denied') {
+          console.debug('[SpareBolt] push registration:', res.reason);
+        }
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
+
   const isAdmin = location.pathname.startsWith('/admin');
 
   // Hide bottom nav on auth, checkout, product detail, and admin console

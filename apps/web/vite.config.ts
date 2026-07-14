@@ -43,6 +43,8 @@ export default defineConfig({
         ],
       },
       workbox: {
+        // Inject Firebase messaging into the PWA service worker (background push)
+        importScripts: ['/firebase-messaging-compat.js'],
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         runtimeCaching: [
           {

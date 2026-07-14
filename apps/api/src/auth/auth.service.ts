@@ -9,6 +9,7 @@ import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import {
   LoginDto,
   RegisterDto,
@@ -25,6 +26,7 @@ export class AuthService {
     private prisma: PrismaService,
     private jwt: JwtService,
     private config: ConfigService,
+    private notifications: NotificationsService,
   ) {}
 
   private signToken(user: {
@@ -266,15 +268,13 @@ export class AuthService {
         where: { id: userId },
         data: { role: Role.SELLER },
       }),
-      this.prisma.notification.create({
-        data: {
-          userId,
-          type: 'APPROVAL',
-          title: 'Seller application received',
-          body: 'Your documents are under review. You can list parts after approval.',
-        },
-      }),
     ]);
+
+    await this.notifications.notify(userId, {
+      type: 'APPROVAL',
+      title: 'Seller application received',
+      body: 'Your documents are under review. You can list parts after approval.',
+    });
 
     return {
       ...profile,
@@ -367,15 +367,13 @@ export class AuthService {
         where: { id: userId },
         data: { role: Role.DRIVER },
       }),
-      this.prisma.notification.create({
-        data: {
-          userId,
-          type: 'APPROVAL',
-          title: 'Driver application received',
-          body: 'Your documents are under review. You can accept jobs after approval.',
-        },
-      }),
     ]);
+
+    await this.notifications.notify(userId, {
+      type: 'APPROVAL',
+      title: 'Driver application received',
+      body: 'Your documents are under review. You can accept jobs after approval.',
+    });
 
     return {
       ...profile,

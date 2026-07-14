@@ -1,4 +1,14 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -28,10 +38,24 @@ export class NotificationsController {
     @CurrentUser('id') userId: string,
     @Body() body: { token: string; platform?: string },
   ) {
+    if (!body?.token?.trim()) {
+      throw new BadRequestException('token is required');
+    }
     return this.notifications.registerPushToken(
       userId,
       body.token,
-      body.platform,
+      body.platform || 'web',
     );
+  }
+
+  @Delete('push-token')
+  removeToken(
+    @CurrentUser('id') userId: string,
+    @Body() body: { token: string },
+  ) {
+    if (!body?.token?.trim()) {
+      throw new BadRequestException('token is required');
+    }
+    return this.notifications.unregisterPushToken(userId, body.token);
   }
 }

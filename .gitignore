@@ -16,6 +16,8 @@ apps/api/uploads
 .idea
 .vscode
 server-credentials.json
+firebase-service-account.json
+**/firebase-service-account.json
 *.pem
 *.key
 id_rsa*

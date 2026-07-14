@@ -1,10 +1,14 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ApprovalStatus, DisputeStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class AdminService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notifications: NotificationsService,
+  ) {}
 
   async dashboard() {
     const [
@@ -120,21 +124,18 @@ export class AdminService {
       },
     });
 
-    await this.prisma.notification.create({
-      data: {
-        userId: profile.userId,
-        type: 'APPROVAL',
-        title:
-          status === 'APPROVED'
-            ? 'Seller account approved'
-            : status === 'REJECTED'
-              ? 'Seller application rejected'
-              : `Seller status: ${status}`,
-        body:
-          status === 'APPROVED'
-            ? 'You can now create listings and sell parts.'
-            : rejectionReason || `Your seller status is now ${status}`,
-      },
+    await this.notifications.notify(profile.userId, {
+      type: 'APPROVAL',
+      title:
+        status === 'APPROVED'
+          ? 'Seller account approved'
+          : status === 'REJECTED'
+            ? 'Seller application rejected'
+            : `Seller status: ${status}`,
+      body:
+        status === 'APPROVED'
+          ? 'You can now create listings and sell parts.'
+          : rejectionReason || `Your seller status is now ${status}`,
     });
 
     return profile;
@@ -174,21 +175,18 @@ export class AdminService {
       },
     });
 
-    await this.prisma.notification.create({
-      data: {
-        userId: profile.userId,
-        type: 'APPROVAL',
-        title:
-          status === 'APPROVED'
-            ? 'Driver account approved'
-            : status === 'REJECTED'
-              ? 'Driver application rejected'
-              : `Driver status: ${status}`,
-        body:
-          status === 'APPROVED'
-            ? 'You can now go online and accept delivery jobs.'
-            : rejectionReason || `Your driver status is now ${status}`,
-      },
+    await this.notifications.notify(profile.userId, {
+      type: 'APPROVAL',
+      title:
+        status === 'APPROVED'
+          ? 'Driver account approved'
+          : status === 'REJECTED'
+            ? 'Driver application rejected'
+            : `Driver status: ${status}`,
+      body:
+        status === 'APPROVED'
+          ? 'You can now go online and accept delivery jobs.'
+          : rejectionReason || `Your driver status is now ${status}`,
     });
 
     return profile;

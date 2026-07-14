@@ -6,10 +6,14 @@ import {
 } from '@nestjs/common';
 import { DeliveryStatus, OrderStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class DeliveriesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notifications: NotificationsService,
+  ) {}
 
   private async getDriver(userId: string) {
     const driver = await this.prisma.driverProfile.findUnique({
@@ -79,7 +83,7 @@ export class DeliveriesService {
       throw new BadRequestException('Job no longer available');
     }
 
-    return this.prisma.$transaction([
+    const result = await this.prisma.$transaction([
       this.prisma.delivery.update({
         where: { id: deliveryId },
         data: {
@@ -92,16 +96,16 @@ export class DeliveriesService {
         where: { id: delivery.orderId },
         data: { status: OrderStatus.DRIVER_ASSIGNED },
       }),
-      this.prisma.notification.create({
-        data: {
-          userId: delivery.order.customerId,
-          type: 'DELIVERY',
-          title: 'Driver assigned',
-          body: 'A driver has accepted your delivery',
-          data: { orderId: delivery.orderId, deliveryId },
-        },
-      }),
     ]);
+
+    await this.notifications.notify(delivery.order.customerId, {
+      type: 'DELIVERY',
+      title: 'Driver assigned',
+      body: 'A driver has accepted your delivery',
+      data: { orderId: delivery.orderId, deliveryId },
+    });
+
+    return result;
   }
 
   async reject(userId: string, deliveryId: string, reason?: string) {
@@ -176,16 +180,14 @@ export class DeliveriesService {
         where: { id: delivery.orderId },
         data: { status: orderStatusMap[status]! },
       }),
-      this.prisma.notification.create({
-        data: {
-          userId: delivery.order.customerId,
-          type: 'DELIVERY',
-          title: `Delivery ${status.toLowerCase().replace('_', ' ')}`,
-          body: `Order ${delivery.order.orderNumber}: ${status}`,
-          data: { orderId: delivery.orderId, status },
-        },
-      }),
     ]);
+
+    await this.notifications.notify(delivery.order.customerId, {
+      type: 'DELIVERY',
+      title: `Delivery ${status.toLowerCase().replace('_', ' ')}`,
+      body: `Order ${delivery.order.orderNumber}: ${status}`,
+      data: { orderId: delivery.orderId, status },
+    });
 
     if (status === 'DELIVERED') {
       await this.prisma.driverProfile.update({

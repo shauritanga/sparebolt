@@ -8,6 +8,7 @@ import { ConfigService } from '@nestjs/config';
 import { OrderStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { PaymentsService } from '../payments/payments.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import {
   CreateAddressDto,
   CreateOrderDto,
@@ -21,6 +22,7 @@ export class OrdersService {
     private prisma: PrismaService,
     private payments: PaymentsService,
     private config: ConfigService,
+    private notifications: NotificationsService,
   ) {}
 
   private generateOrderNumber() {
@@ -231,16 +233,14 @@ export class OrdersService {
           releasedAt: new Date(),
         },
       }),
-      this.prisma.notification.create({
-        data: {
-          userId,
-          type: 'PAYMENT',
-          title: 'Payment released',
-          body: `Escrow released for order ${order.orderNumber}`,
-          data: { orderId },
-        },
-      }),
     ]);
+
+    await this.notifications.notify(userId, {
+      type: 'PAYMENT',
+      title: 'Payment released',
+      body: `Escrow released for order ${order.orderNumber}`,
+      data: { orderId },
+    });
 
     // Notify sellers
     const sellerIds = [...new Set(order.items.map((i) => i.sellerId))];
@@ -249,14 +249,11 @@ export class OrdersService {
         where: { id: sellerId },
       });
       if (seller) {
-        await this.prisma.notification.create({
-          data: {
-            userId: seller.userId,
-            type: 'PAYMENT',
-            title: 'Funds released',
-            body: `Payment for order ${order.orderNumber} has been released to you`,
-            data: { orderId },
-          },
+        await this.notifications.notify(seller.userId, {
+          type: 'PAYMENT',
+          title: 'Funds released',
+          body: `Payment for order ${order.orderNumber} has been released to you`,
+          data: { orderId },
         });
         await this.prisma.sellerProfile.update({
           where: { id: sellerId },
@@ -370,7 +367,7 @@ export class OrdersService {
     });
     if (!order) return null;
 
-    return this.prisma.$transaction(async (tx) => {
+    const updated = await this.prisma.$transaction(async (tx) => {
       await tx.payment.update({
         where: { orderId },
         data: {
@@ -400,23 +397,20 @@ export class OrdersService {
         },
       });
 
-      const updated = await tx.order.update({
+      return tx.order.update({
         where: { id: orderId },
         data: { status: OrderStatus.AWAITING_DRIVER },
         include: { escrow: true, delivery: true, payment: true },
       });
-
-      await tx.notification.create({
-        data: {
-          userId: order.customerId,
-          type: 'PAYMENT',
-          title: 'Payment received',
-          body: `Your payment for ${order.orderNumber} is held in escrow until delivery`,
-          data: { orderId },
-        },
-      });
-
-      return updated;
     });
+
+    await this.notifications.notify(order.customerId, {
+      type: 'PAYMENT',
+      title: 'Payment received',
+      body: `Your payment for ${order.orderNumber} is held in escrow until delivery`,
+      data: { orderId },
+    });
+
+    return updated;
   }
 }
