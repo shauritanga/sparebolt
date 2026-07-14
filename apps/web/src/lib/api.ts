@@ -187,8 +187,43 @@ export type Order = {
     id: string;
     status: string;
     driverId?: string;
-    currentLat?: number;
-    currentLng?: number;
+    currentLat?: number | null;
+    currentLng?: number | null;
+    locationUpdatedAt?: string | null;
+    pickupLat?: number | null;
+    pickupLng?: number | null;
+    pickupLabel?: string | null;
+    pickupCity?: string | null;
+    dropoffLat?: number | null;
+    dropoffLng?: number | null;
+    driver?: {
+      name: string;
+      phone?: string | null;
+      vehicleType: string;
+      vehiclePlate: string;
+      ratingAvg: number;
+    } | null;
   };
+  tracking?: {
+    enabled: boolean;
+    phase: 'to_shop' | 'to_customer' | 'idle' | 'done';
+    currentLat?: number | null;
+    currentLng?: number | null;
+    locationUpdatedAt?: string | null;
+    pickupLat?: number | null;
+    pickupLng?: number | null;
+    pickupLabel?: string | null;
+    pickupCity?: string | null;
+    dropoffLat?: number | null;
+    dropoffLng?: number | null;
+    dropoffLabel?: string | null;
+    driver?: {
+      name: string;
+      phone?: string | null;
+      vehicleType: string;
+      vehiclePlate: string;
+      ratingAvg: number;
+    } | null;
+  } | null;
   address?: Address;
 };

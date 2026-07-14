@@ -57,8 +57,16 @@ export function DriverPage() {
   );
   const [locHint, setLocHint] = useState<string | null>(null);
   const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const watchIdRef = useRef<number | null>(null);
 
   const approved = driverProfile?.status === 'APPROVED';
+
+  const activeJob = mine.find(
+    (j) =>
+      j.status === 'ACCEPTED' ||
+      j.status === 'PICKED_UP' ||
+      j.status === 'IN_TRANSIT',
+  );
 
   const load = useCallback(() => {
     if (!approved) return;
@@ -67,22 +75,35 @@ export function DriverPage() {
     void api.get('/driver/earnings').then((r) => setEarnings(r.data));
   }, [approved]);
 
-  const pushLocation = useCallback(async () => {
-    if (!online || !approved) return;
-    const coords = await readGps();
-    if (!coords) {
-      setLocHint(
-        'Location unavailable — jobs match by city until GPS is allowed',
-      );
-      return;
-    }
-    setLocHint(null);
-    try {
-      await api.patch('/driver/location', coords);
-    } catch {
-      /* ignore heartbeat errors */
-    }
-  }, [online, approved]);
+  const pushLocation = useCallback(
+    async (opts?: { forceActive?: boolean }) => {
+      if (!approved) return;
+      if (!online && !opts?.forceActive && !activeJob) return;
+      const coords = await readGps();
+      if (!coords) {
+        if (online || activeJob) {
+          setLocHint(
+            activeJob
+              ? 'Enable GPS so the customer can track you live'
+              : 'Location unavailable — jobs match by city until GPS is allowed',
+          );
+        }
+        return;
+      }
+      setLocHint(null);
+      try {
+        // Profile heartbeat (dispatch) — also mirrors onto active delivery server-side
+        await api.patch('/driver/location', coords);
+        // Explicit job location for live customer map
+        if (activeJob) {
+          await api.patch(`/driver/jobs/${activeJob.id}/location`, coords);
+        }
+      } catch {
+        /* ignore heartbeat errors */
+      }
+    },
+    [online, approved, activeJob],
+  );
 
   useEffect(() => {
     setOnline(!!driverProfile?.isOnline);
@@ -95,26 +116,58 @@ export function DriverPage() {
     return () => clearInterval(iv);
   }, [approved, load]);
 
-  // GPS heartbeat while online (dispatch distance matching)
+  // GPS: faster while on active job (customer live track); slower when just online
   useEffect(() => {
     if (heartbeatRef.current) {
       clearInterval(heartbeatRef.current);
       heartbeatRef.current = null;
     }
-    if (!online || !approved) return;
+    if (watchIdRef.current != null && navigator.geolocation) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+    }
 
-    void pushLocation();
+    if (!approved) return;
+    if (!online && !activeJob) return;
+
+    const intervalMs = activeJob ? 12_000 : 45_000;
+    void pushLocation({ forceActive: !!activeJob });
     heartbeatRef.current = setInterval(() => {
-      void pushLocation();
-    }, 45_000);
+      void pushLocation({ forceActive: !!activeJob });
+    }, intervalMs);
+
+    // Continuous watch while on a job for smoother customer map
+    if (activeJob && navigator.geolocation) {
+      watchIdRef.current = navigator.geolocation.watchPosition(
+        (pos) => {
+          const coords = {
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+          };
+          setLocHint(null);
+          void api.patch('/driver/location', coords).catch(() => undefined);
+          void api
+            .patch(`/driver/jobs/${activeJob.id}/location`, coords)
+            .catch(() => undefined);
+        },
+        () => {
+          setLocHint('Enable GPS so the customer can track you live');
+        },
+        { enableHighAccuracy: true, maximumAge: 8_000, timeout: 15_000 },
+      );
+    }
 
     return () => {
       if (heartbeatRef.current) {
         clearInterval(heartbeatRef.current);
         heartbeatRef.current = null;
       }
+      if (watchIdRef.current != null && navigator.geolocation) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current = null;
+      }
     };
-  }, [online, approved, pushLocation]);
+  }, [online, approved, activeJob?.id, activeJob?.status, pushLocation]);
 
   const toggleOnline = async () => {
     const next = !online;
@@ -331,6 +384,9 @@ export function DriverPage() {
                   <p className="font-mono text-xs">{j.order.orderNumber}</p>
                   <Badge>{j.status}</Badge>
                 </div>
+                <p className="mt-2 text-[11px] font-semibold text-bolt-700 dark:text-bolt-300">
+                  Sharing live location with customer
+                </p>
                 {(j.pickupLabel || j.pickupCity) && (
                   <p className="mt-2 flex items-start gap-1 text-sm font-semibold">
                     <Store className="mt-0.5 h-4 w-4 shrink-0" />

@@ -167,6 +167,17 @@ export class DeliveriesService {
     }
 
     // Atomic claim — first accept wins under concurrent drivers
+    // Seed live track with driver's current position when available
+    const now = new Date();
+    const seedLoc =
+      driver.latitude != null && driver.longitude != null
+        ? {
+            currentLat: driver.latitude,
+            currentLng: driver.longitude,
+            locationUpdatedAt: now,
+          }
+        : {};
+
     const claimed = await this.prisma.$transaction(async (tx) => {
       const res = await tx.delivery.updateMany({
         where: {
@@ -177,8 +188,9 @@ export class DeliveriesService {
         data: {
           driverId: driver.id,
           status: 'ACCEPTED',
-          acceptedAt: new Date(),
+          acceptedAt: now,
           dispatchNextAt: null,
+          ...seedLoc,
         },
       });
       if (res.count === 0) {
@@ -194,7 +206,7 @@ export class DeliveriesService {
     await this.notifications.notify(delivery.order.customerId, {
       type: 'DELIVERY',
       title: 'Driver assigned',
-      body: 'A driver has accepted your delivery',
+      body: 'A driver has accepted your delivery — you can track them live',
       data: {
         orderId: delivery.orderId,
         deliveryId,
@@ -256,6 +268,7 @@ export class DeliveriesService {
       status: DeliveryStatus;
       currentLat?: number;
       currentLng?: number;
+      locationUpdatedAt?: Date;
       pickedUpAt?: Date;
       deliveredAt?: Date;
     } = { status };
@@ -263,6 +276,7 @@ export class DeliveriesService {
     if (location) {
       data.currentLat = location.lat;
       data.currentLng = location.lng;
+      data.locationUpdatedAt = new Date();
     }
     if (status === 'PICKED_UP') data.pickedUpAt = new Date();
     if (status === 'DELIVERED') data.deliveredAt = new Date();
@@ -310,6 +324,10 @@ export class DeliveriesService {
     return updated;
   }
 
+  /**
+   * Live track: write position onto an active delivery for the customer map.
+   * Only while status is ACCEPTED | PICKED_UP | IN_TRANSIT.
+   */
   async updateLocation(
     userId: string,
     deliveryId: string,
@@ -317,30 +335,55 @@ export class DeliveriesService {
     lng: number,
   ) {
     const driver = await this.getDriver(userId);
+    if (
+      !Number.isFinite(lat) ||
+      !Number.isFinite(lng) ||
+      Math.abs(lat) > 90 ||
+      Math.abs(lng) > 180
+    ) {
+      throw new BadRequestException('Invalid coordinates');
+    }
+
     const delivery = await this.prisma.delivery.findUnique({
       where: { id: deliveryId },
     });
     if (!delivery || delivery.driverId !== driver.id) {
       throw new ForbiddenException();
     }
+    if (!['ACCEPTED', 'PICKED_UP', 'IN_TRANSIT'].includes(delivery.status)) {
+      throw new BadRequestException('Tracking only available on active jobs');
+    }
 
+    const now = new Date();
     await this.prisma.driverProfile.update({
       where: { id: driver.id },
       data: {
         latitude: lat,
         longitude: lng,
-        locationUpdatedAt: new Date(),
+        locationUpdatedAt: now,
       },
     });
 
     return this.prisma.delivery.update({
       where: { id: deliveryId },
-      data: { currentLat: lat, currentLng: lng },
+      data: {
+        currentLat: lat,
+        currentLng: lng,
+        locationUpdatedAt: now,
+      },
+      select: {
+        id: true,
+        currentLat: true,
+        currentLng: true,
+        locationUpdatedAt: true,
+        status: true,
+      },
     });
   }
 
   /**
-   * Heartbeat: update live driver position while online (dispatch uses this).
+   * Heartbeat while online (dispatch). If driver has an active job, also
+   * mirrors coordinates onto that delivery for customer live tracking.
    */
   async updateDriverLocation(userId: string, lat: number, lng: number) {
     const driver = await this.getDriver(userId);
@@ -352,12 +395,13 @@ export class DeliveriesService {
     ) {
       throw new BadRequestException('Invalid coordinates');
     }
-    return this.prisma.driverProfile.update({
+    const now = new Date();
+    const profile = await this.prisma.driverProfile.update({
       where: { id: driver.id },
       data: {
         latitude: lat,
         longitude: lng,
-        locationUpdatedAt: new Date(),
+        locationUpdatedAt: now,
       },
       select: {
         id: true,
@@ -367,6 +411,30 @@ export class DeliveriesService {
         isOnline: true,
       },
     });
+
+    // Mirror onto active delivery so customers can track without a second API call
+    const active = await this.prisma.delivery.findFirst({
+      where: {
+        driverId: driver.id,
+        status: { in: ['ACCEPTED', 'PICKED_UP', 'IN_TRANSIT'] },
+      },
+      select: { id: true },
+    });
+    if (active) {
+      await this.prisma.delivery.update({
+        where: { id: active.id },
+        data: {
+          currentLat: lat,
+          currentLng: lng,
+          locationUpdatedAt: now,
+        },
+      });
+    }
+
+    return {
+      ...profile,
+      activeDeliveryId: active?.id ?? null,
+    };
   }
 
   async setOnline(

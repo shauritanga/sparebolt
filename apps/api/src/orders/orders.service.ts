@@ -203,7 +203,126 @@ export class OrdersService {
       }
     }
 
-    return order;
+    return this.withLiveTracking(order);
+  }
+
+  /**
+   * Customer-safe live tracking: share driver position only while the job is
+   * active; stop after delivered (privacy).
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private withLiveTracking(order: any) {
+    const d = order.delivery as
+      | {
+          id: string;
+          status: string;
+          driverId: string | null;
+          currentLat: number | null;
+          currentLng: number | null;
+          locationUpdatedAt: Date | null;
+          pickupLat: number | null;
+          pickupLng: number | null;
+          pickupLabel: string | null;
+          pickupCity: string | null;
+          dropoffLat: number | null;
+          dropoffLng: number | null;
+          fee: unknown;
+          acceptedAt: Date | null;
+          pickedUpAt: Date | null;
+          deliveredAt: Date | null;
+          driver: {
+            vehicleType: string;
+            vehiclePlate: string;
+            ratingAvg: number;
+            user?: {
+              firstName: string;
+              lastName: string;
+              phone: string | null;
+            } | null;
+          } | null;
+        }
+      | null;
+
+    const activeStatuses = ['ACCEPTED', 'PICKED_UP', 'IN_TRANSIT'];
+    const live =
+      !!d &&
+      activeStatuses.includes(d.status) &&
+      ['DRIVER_ASSIGNED', 'PICKED_UP', 'IN_TRANSIT'].includes(order.status);
+
+    const dropLat =
+      d?.dropoffLat ?? order.address?.latitude ?? null;
+    const dropLng =
+      d?.dropoffLng ?? order.address?.longitude ?? null;
+
+    let phase: 'to_shop' | 'to_customer' | 'idle' | 'done' = 'idle';
+    if (!d || d.status === 'REQUESTED') phase = 'idle';
+    else if (d.status === 'ACCEPTED') phase = 'to_shop';
+    else if (d.status === 'PICKED_UP' || d.status === 'IN_TRANSIT')
+      phase = 'to_customer';
+    else phase = 'done';
+
+    const currentLat = live ? d!.currentLat : null;
+    const currentLng = live ? d!.currentLng : null;
+
+    const publicDriver = d?.driver
+      ? {
+          name: d.driver.user
+            ? `${d.driver.user.firstName} ${d.driver.user.lastName}`.trim()
+            : 'Driver',
+          phone: d.driver.user?.phone ?? null,
+          vehicleType: d.driver.vehicleType,
+          vehiclePlate: d.driver.vehiclePlate,
+          ratingAvg: d.driver.ratingAvg,
+        }
+      : null;
+
+    const tracking = d
+      ? {
+          enabled: live,
+          phase,
+          currentLat,
+          currentLng,
+          locationUpdatedAt: live ? d.locationUpdatedAt : null,
+          pickupLat: d.pickupLat,
+          pickupLng: d.pickupLng,
+          pickupLabel: d.pickupLabel,
+          pickupCity: d.pickupCity,
+          dropoffLat: dropLat,
+          dropoffLng: dropLng,
+          dropoffLabel: order.address
+            ? `${order.address.street}, ${order.address.city}`
+            : null,
+          driver: publicDriver,
+        }
+      : null;
+
+    const delivery = d
+      ? {
+          id: d.id,
+          status: d.status,
+          driverId: d.driverId,
+          currentLat,
+          currentLng,
+          locationUpdatedAt: live ? d.locationUpdatedAt : null,
+          pickupLat: d.pickupLat,
+          pickupLng: d.pickupLng,
+          pickupLabel: d.pickupLabel,
+          pickupCity: d.pickupCity,
+          dropoffLat: dropLat,
+          dropoffLng: dropLng,
+          fee: d.fee,
+          acceptedAt: d.acceptedAt,
+          pickedUpAt: d.pickedUpAt,
+          deliveredAt: d.deliveredAt,
+          driver: publicDriver,
+        }
+      : null;
+
+    return {
+      ...order,
+      delivery,
+      tracking,
+    };
   }
 
   async confirmReceipt(userId: string, orderId: string) {
