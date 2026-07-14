@@ -60,6 +60,9 @@ const resources = {
       earnings: 'Earnings',
       shopAsCustomer: 'Shop as customer',
       shopAsCustomerHint: 'Browse parts and place orders',
+      footerTagline:
+        'Vehicle spare parts with escrow-protected delivery across East Africa.',
+      footerRights: 'All rights reserved.',
       dashboard: 'Dashboard',
       trustTitle: 'Pay with confidence',
       trustBody:
@@ -177,6 +180,9 @@ const resources = {
       earnings: 'Mapato',
       shopAsCustomer: 'Nunua kama mteja',
       shopAsCustomerHint: 'Tafuta sehemu na weka oda',
+      footerTagline:
+        'Vipuri vya magari na uwasilishaji salama wa escrow Afrika Mashariki.',
+      footerRights: 'Haki zote zimehifadhiwa.',
       dashboard: 'Dashibodi',
       trustTitle: 'Lipa kwa ujasiri',
       trustBody:

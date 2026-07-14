@@ -21,6 +21,7 @@ import { useAuthStore } from '@/stores/auth-store';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/hooks/use-theme';
 import { isDriverRole, isSellerRole } from '@/lib/role-home';
+import { SiteFooter } from '@/components/layout/site-footer';
 import { useEffect, useState } from 'react';
 
 type NavItem = {
@@ -84,12 +85,16 @@ export function AppShell() {
   }, [user?.id]);
 
   const isAdmin = location.pathname.startsWith('/admin');
+  const isAuth = location.pathname.startsWith('/auth');
 
-  const hideNav =
-    location.pathname.startsWith('/auth') ||
+  const hideMobileNav =
+    isAuth ||
     location.pathname.startsWith('/checkout') ||
     location.pathname.startsWith('/parts/') ||
     isAdmin;
+
+  /** Full marketing chrome (header nav + footer) on desktop except admin */
+  const showDesktopChrome = !isAdmin;
 
   const toggleLang = () => {
     const next = i18n.language === 'en' ? 'sw' : 'en';
@@ -178,9 +183,11 @@ export function AppShell() {
   }
 
   return (
-    <div className="flex min-h-dvh flex-col bg-background md:bg-muted/30">
+    <div className="flex min-h-dvh flex-col bg-background">
+      {/* ── Header ─────────────────────────────────────────────── */}
       <header className="sticky top-0 z-40 border-b border-border bg-card/95 backdrop-blur-md safe-pt">
-        <div className="mx-auto flex h-14 max-w-7xl items-center gap-3 px-4 lg:h-16 lg:px-6">
+        {/* Mobile: compact bar */}
+        <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-3 px-4 md:hidden">
           <Link to={roleHome} className="flex shrink-0 items-center gap-2">
             <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-bolt-700 text-white shadow-sm">
               <Bolt className="h-5 w-5 fill-current" />
@@ -189,52 +196,7 @@ export function AppShell() {
               Spare<span className="text-bolt-500">Bolt</span>
             </span>
           </Link>
-
-          {/* Desktop primary nav */}
-          {!hideNav && (
-            <nav
-              className="ml-4 hidden min-w-0 flex-1 items-center gap-1 md:flex lg:ml-8"
-              aria-label="Main"
-            >
-              {nav.map((item) => {
-                const active = navItemActive(
-                  item,
-                  location.pathname,
-                  location.search,
-                );
-                return (
-                  <NavLink
-                    key={item.to}
-                    to={item.to}
-                    end={item.end}
-                    className={cn(
-                      'relative inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-semibold transition-colors',
-                      active
-                        ? 'bg-bolt-700/10 text-bolt-800 dark:bg-bolt-500/15 dark:text-bolt-200'
-                        : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-                    )}
-                  >
-                    <span className="truncate">{item.label}</span>
-                    {item.badge ? (
-                      <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-signal px-1.5 text-[10px] font-bold text-steel-950">
-                        {item.badge}
-                      </span>
-                    ) : null}
-                  </NavLink>
-                );
-              })}
-            </nav>
-          )}
-
-          <div className="ml-auto flex items-center gap-0.5">
-            {!workMode && !hideNav && (
-              <Link
-                to="/browse"
-                className="mr-1 hidden max-w-[12rem] truncate rounded-xl border border-border bg-muted/40 px-3 py-1.5 text-sm text-muted-foreground transition hover:border-bolt-300 hover:text-foreground lg:inline-flex"
-              >
-                {t('searchPlaceholder')}
-              </Link>
-            )}
+          <div className="flex items-center gap-0.5">
             <button
               type="button"
               onClick={toggleLang}
@@ -249,11 +211,7 @@ export function AppShell() {
               className="flex min-h-[44px] min-w-[44px] cursor-pointer items-center justify-center rounded-xl p-2.5 text-muted-foreground hover:bg-muted hover:text-foreground"
               aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
             >
-              {isDark ? (
-                <Sun className="h-5 w-5" />
-              ) : (
-                <Moon className="h-5 w-5" />
-              )}
+              {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
             </button>
             {user && (
               <Link
@@ -267,7 +225,7 @@ export function AppShell() {
             {!workMode && (
               <Link
                 to="/cart"
-                className="relative flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl p-2.5 text-muted-foreground hover:bg-muted hover:text-foreground md:hidden"
+                className="relative flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl p-2.5 text-muted-foreground hover:bg-muted hover:text-foreground"
                 aria-label={t('cart')}
               >
                 <ShoppingCart className="h-5 w-5" />
@@ -278,23 +236,132 @@ export function AppShell() {
                 )}
               </Link>
             )}
-            {/* Desktop account chip */}
-            <Link
-              to={user ? '/account' : '/auth/login'}
-              className="ml-1 hidden items-center gap-2 rounded-xl border border-border bg-card px-2.5 py-1.5 text-sm font-semibold text-foreground shadow-sm transition hover:border-bolt-300 md:inline-flex"
-            >
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-bolt-700/10 text-xs font-bold text-bolt-800 dark:text-bolt-200">
-                {user
-                  ? `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}`.toUpperCase() ||
-                    'SB'
-                  : '?'}
-              </span>
-              <span className="max-w-[7rem] truncate">
-                {user ? user.firstName : t('login')}
-              </span>
-            </Link>
           </div>
         </div>
+
+        {/* Desktop: standard site header */}
+        {showDesktopChrome && (
+          <div className="mx-auto hidden max-w-7xl px-6 md:block lg:px-8">
+            {/* Top utility row */}
+            <div className="flex h-10 items-center justify-between border-b border-border/60 text-xs text-muted-foreground">
+              <p className="truncate font-medium">{t('footerTagline')}</p>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={toggleLang}
+                  className="cursor-pointer font-bold uppercase tracking-wide hover:text-foreground"
+                >
+                  {i18n.language === 'en' ? 'Kiswahili' : 'English'}
+                </button>
+                <button
+                  type="button"
+                  onClick={toggleTheme}
+                  className="inline-flex cursor-pointer items-center gap-1.5 hover:text-foreground"
+                >
+                  {isDark ? (
+                    <>
+                      <Sun className="h-3.5 w-3.5" /> {t('lightMode')}
+                    </>
+                  ) : (
+                    <>
+                      <Moon className="h-3.5 w-3.5" /> {t('darkMode')}
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Main brand + nav row */}
+            <div className="flex h-16 items-center gap-8 lg:h-[4.25rem]">
+              <Link to={roleHome} className="flex shrink-0 items-center gap-2.5">
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-bolt-700 text-white shadow-sm">
+                  <Bolt className="h-5 w-5 fill-current" />
+                </span>
+                <div className="leading-tight">
+                  <span className="font-display text-xl font-extrabold tracking-tight text-foreground">
+                    Spare<span className="text-bolt-500">Bolt</span>
+                  </span>
+                  <p className="hidden text-[11px] font-medium text-muted-foreground lg:block">
+                    {t('tagline')}
+                  </p>
+                </div>
+              </Link>
+
+              {!isAuth && (
+                <nav
+                  className="flex min-w-0 flex-1 items-center justify-center gap-1"
+                  aria-label="Main"
+                >
+                  {nav.map((item) => {
+                    const active = navItemActive(
+                      item,
+                      location.pathname,
+                      location.search,
+                    );
+                    return (
+                      <NavLink
+                        key={item.to}
+                        to={item.to}
+                        end={item.end}
+                        className={cn(
+                          'relative inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-semibold transition-colors',
+                          active
+                            ? 'text-bolt-800 dark:text-bolt-200'
+                            : 'text-muted-foreground hover:text-foreground',
+                        )}
+                      >
+                        <span>{item.label}</span>
+                        {item.badge ? (
+                          <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-signal px-1.5 text-[10px] font-bold text-steel-950">
+                            {item.badge}
+                          </span>
+                        ) : null}
+                        {active && (
+                          <span className="absolute inset-x-3 -bottom-[calc(0.5rem+1px)] h-0.5 rounded-full bg-bolt-600" />
+                        )}
+                      </NavLink>
+                    );
+                  })}
+                </nav>
+              )}
+
+              <div className="ml-auto flex shrink-0 items-center gap-2">
+                {!workMode && !isAuth && (
+                  <Link
+                    to="/browse"
+                    className="hidden max-w-[14rem] truncate rounded-full border border-border bg-muted/50 px-4 py-2 text-sm text-muted-foreground transition hover:border-bolt-300 hover:bg-card hover:text-foreground lg:inline-flex"
+                  >
+                    {t('searchPlaceholder')}
+                  </Link>
+                )}
+                {user && (
+                  <Link
+                    to="/notifications"
+                    className="relative flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                    aria-label={t('notifications')}
+                  >
+                    <Bell className="h-5 w-5" />
+                  </Link>
+                )}
+                <Link
+                  to={user ? '/account' : '/auth/login'}
+                  className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-sm font-semibold text-foreground shadow-sm transition hover:border-bolt-300"
+                >
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-bolt-700 text-[11px] font-bold text-white">
+                    {user
+                      ? `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}`.toUpperCase() ||
+                        'SB'
+                      : '?'}
+                  </span>
+                  <span className="max-w-[8rem] truncate">
+                    {user ? user.firstName : t('login')}
+                  </span>
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
+
         {offline && (
           <div className="bg-warning-soft px-4 py-1.5 text-center text-xs font-medium text-warning-soft-foreground">
             {t('offline')}
@@ -302,94 +369,22 @@ export function AppShell() {
         )}
       </header>
 
-      <div
+      {/* ── Main ───────────────────────────────────────────────── */}
+      <main
         className={cn(
-          'mx-auto flex w-full max-w-7xl flex-1',
-          workMode && !hideNav && 'md:gap-0',
+          'mx-auto w-full max-w-7xl flex-1 px-4 py-4',
+          !hideMobileNav && 'pb-24 md:pb-10',
+          'md:px-6 md:py-8 lg:px-8',
         )}
       >
-        {/* Desktop sidebar for seller / driver workspaces */}
-        {workMode && !hideNav && (
-          <aside className="sticky top-16 hidden h-[calc(100dvh-4rem)] w-56 shrink-0 flex-col border-r border-border bg-card/80 py-4 backdrop-blur-sm lg:flex lg:w-60">
-            <p className="mb-3 px-5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-              {driverMode ? t('jobs') : t('dashboard')}
-            </p>
-            <nav className="flex flex-1 flex-col gap-0.5 px-2" aria-label="Workspace">
-              {nav.map((item) => {
-                const active = navItemActive(
-                  item,
-                  location.pathname,
-                  location.search,
-                );
-                const Icon = item.icon;
-                return (
-                  <NavLink
-                    key={`side-${item.to}`}
-                    to={item.to}
-                    end={item.end}
-                    className={cn(
-                      'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors',
-                      active
-                        ? 'bg-bolt-700 text-white shadow-sm'
-                        : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-                    )}
-                  >
-                    <Icon className="h-4 w-4 shrink-0" strokeWidth={2.25} />
-                    <span className="truncate">{item.label}</span>
-                    {item.badge ? (
-                      <span
-                        className={cn(
-                          'ml-auto flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold',
-                          active
-                            ? 'bg-white/20 text-white'
-                            : 'bg-amber-signal text-steel-950',
-                        )}
-                      >
-                        {item.badge}
-                      </span>
-                    ) : null}
-                  </NavLink>
-                );
-              })}
-            </nav>
-            <div className="mt-auto border-t border-border px-4 pt-3">
-              <p className="truncate text-xs font-semibold text-foreground">
-                {user
-                  ? `${user.firstName} ${user.lastName}`.trim()
-                  : ''}
-              </p>
-              <p className="truncate text-[11px] capitalize text-muted-foreground">
-                {user?.role?.toLowerCase()}
-              </p>
-            </div>
-          </aside>
-        )}
+        <Outlet />
+      </main>
 
-        <main
-          className={cn(
-            'min-w-0 flex-1 px-4 py-4',
-            !hideNav && 'pb-24 md:pb-8',
-            workMode && !hideNav && 'lg:px-8 lg:py-6',
-            !workMode && 'md:px-6 lg:px-8 lg:py-8',
-            // Marketplace pages sit on soft canvas on desktop
-            !workMode && 'md:bg-transparent',
-          )}
-        >
-          <div
-            className={cn(
-              // On desktop marketplace, content can use full main width;
-              // individual pages still control their own max widths.
-              'mx-auto w-full',
-              workMode ? 'max-w-5xl' : 'max-w-6xl',
-            )}
-          >
-            <Outlet />
-          </div>
-        </main>
-      </div>
+      {/* ── Desktop footer ─────────────────────────────────────── */}
+      {showDesktopChrome && <SiteFooter />}
 
-      {/* Mobile bottom nav */}
-      {!hideNav && (
+      {/* ── Mobile bottom nav (unchanged) ──────────────────────── */}
+      {!hideMobileNav && (
         <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-card/95 backdrop-blur-md safe-pb md:hidden">
           <ul className="mx-auto flex max-w-lg items-stretch justify-around px-1 pt-1">
             {nav.map((item) => {
