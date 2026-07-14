@@ -1,4 +1,4 @@
-import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   Home,
   Search,
@@ -45,8 +45,10 @@ export function AppShell() {
   const user = useAuthStore((s) => s.user);
   const refreshMe = useAuthStore((s) => s.refreshMe);
   const location = useLocation();
+  const navigate = useNavigate();
   const { isDark, toggleTheme } = useTheme();
   const [offline, setOffline] = useState(!navigator.onLine);
+  const [headerQ, setHeaderQ] = useState('');
   const driverMode = isDriverRole(user?.role);
   const sellerMode = isSellerRole(user?.role);
   const workMode = driverMode || sellerMode;
@@ -93,7 +95,6 @@ export function AppShell() {
     location.pathname.startsWith('/parts/') ||
     isAdmin;
 
-  /** Full marketing chrome (header nav + footer) on desktop except admin */
   const showDesktopChrome = !isAdmin;
 
   const toggleLang = () => {
@@ -102,7 +103,17 @@ export function AppShell() {
     localStorage.setItem('sb_locale', next);
   };
 
+  /** Desktop top nav order */
   const customerNav: NavItem[] = [
+    { to: '/', icon: Home, label: t('home'), end: true },
+    { to: '/browse', icon: Search, label: t('browse') },
+    { to: '/orders', icon: Package, label: t('orders') },
+    { to: '/cart', icon: ShoppingCart, label: t('cart'), badge: cartCount },
+    { to: '/account', icon: User, label: t('account') },
+  ];
+
+  /** Mobile bottom tabs — original order (icons + labels) */
+  const mobileCustomerNav: NavItem[] = [
     { to: '/', icon: Home, label: t('home'), end: true },
     { to: '/browse', icon: Search, label: t('browse') },
     { to: '/cart', icon: ShoppingCart, label: t('cart'), badge: cartCount },
@@ -169,6 +180,12 @@ export function AppShell() {
       ? sellerNav
       : customerNav;
 
+  const onHeaderSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    const q = headerQ.trim();
+    void navigate(q ? `/browse?q=${encodeURIComponent(q)}` : '/browse');
+  };
+
   if (isAdmin) {
     return (
       <div className="min-h-dvh bg-background">
@@ -183,11 +200,10 @@ export function AppShell() {
   }
 
   return (
-    <div className="flex min-h-dvh flex-col bg-background">
-      {/* ── Header ─────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-40 border-b border-border bg-card/95 backdrop-blur-md safe-pt">
-        {/* Mobile: compact bar */}
-        <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-3 px-4 md:hidden">
+    <div className="flex min-h-dvh flex-col bg-background md:bg-[#eef2f1] dark:md:bg-background">
+      {/* ═══════════════ MOBILE HEADER (unchanged pattern) ═══════════════ */}
+      <header className="sticky top-0 z-40 border-b border-border bg-card/95 backdrop-blur-md safe-pt md:hidden">
+        <div className="mx-auto flex h-14 max-w-lg items-center justify-between gap-3 px-4">
           <Link to={roleHome} className="flex shrink-0 items-center gap-2">
             <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-bolt-700 text-white shadow-sm">
               <Bolt className="h-5 w-5 fill-current" />
@@ -238,130 +254,6 @@ export function AppShell() {
             )}
           </div>
         </div>
-
-        {/* Desktop: standard site header */}
-        {showDesktopChrome && (
-          <div className="mx-auto hidden max-w-7xl px-6 md:block lg:px-8">
-            {/* Top utility row */}
-            <div className="flex h-10 items-center justify-between border-b border-border/60 text-xs text-muted-foreground">
-              <p className="truncate font-medium">{t('footerTagline')}</p>
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={toggleLang}
-                  className="cursor-pointer font-bold uppercase tracking-wide hover:text-foreground"
-                >
-                  {i18n.language === 'en' ? 'Kiswahili' : 'English'}
-                </button>
-                <button
-                  type="button"
-                  onClick={toggleTheme}
-                  className="inline-flex cursor-pointer items-center gap-1.5 hover:text-foreground"
-                >
-                  {isDark ? (
-                    <>
-                      <Sun className="h-3.5 w-3.5" /> {t('lightMode')}
-                    </>
-                  ) : (
-                    <>
-                      <Moon className="h-3.5 w-3.5" /> {t('darkMode')}
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-
-            {/* Main brand + nav row */}
-            <div className="flex h-16 items-center gap-8 lg:h-[4.25rem]">
-              <Link to={roleHome} className="flex shrink-0 items-center gap-2.5">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-bolt-700 text-white shadow-sm">
-                  <Bolt className="h-5 w-5 fill-current" />
-                </span>
-                <div className="leading-tight">
-                  <span className="font-display text-xl font-extrabold tracking-tight text-foreground">
-                    Spare<span className="text-bolt-500">Bolt</span>
-                  </span>
-                  <p className="hidden text-[11px] font-medium text-muted-foreground lg:block">
-                    {t('tagline')}
-                  </p>
-                </div>
-              </Link>
-
-              {!isAuth && (
-                <nav
-                  className="flex min-w-0 flex-1 items-center justify-center gap-1"
-                  aria-label="Main"
-                >
-                  {nav.map((item) => {
-                    const active = navItemActive(
-                      item,
-                      location.pathname,
-                      location.search,
-                    );
-                    return (
-                      <NavLink
-                        key={item.to}
-                        to={item.to}
-                        end={item.end}
-                        className={cn(
-                          'relative inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-semibold transition-colors',
-                          active
-                            ? 'text-bolt-800 dark:text-bolt-200'
-                            : 'text-muted-foreground hover:text-foreground',
-                        )}
-                      >
-                        <span>{item.label}</span>
-                        {item.badge ? (
-                          <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-signal px-1.5 text-[10px] font-bold text-steel-950">
-                            {item.badge}
-                          </span>
-                        ) : null}
-                        {active && (
-                          <span className="absolute inset-x-3 -bottom-[calc(0.5rem+1px)] h-0.5 rounded-full bg-bolt-600" />
-                        )}
-                      </NavLink>
-                    );
-                  })}
-                </nav>
-              )}
-
-              <div className="ml-auto flex shrink-0 items-center gap-2">
-                {!workMode && !isAuth && (
-                  <Link
-                    to="/browse"
-                    className="hidden max-w-[14rem] truncate rounded-full border border-border bg-muted/50 px-4 py-2 text-sm text-muted-foreground transition hover:border-bolt-300 hover:bg-card hover:text-foreground lg:inline-flex"
-                  >
-                    {t('searchPlaceholder')}
-                  </Link>
-                )}
-                {user && (
-                  <Link
-                    to="/notifications"
-                    className="relative flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted hover:text-foreground"
-                    aria-label={t('notifications')}
-                  >
-                    <Bell className="h-5 w-5" />
-                  </Link>
-                )}
-                <Link
-                  to={user ? '/account' : '/auth/login'}
-                  className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-sm font-semibold text-foreground shadow-sm transition hover:border-bolt-300"
-                >
-                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-bolt-700 text-[11px] font-bold text-white">
-                    {user
-                      ? `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}`.toUpperCase() ||
-                        'SB'
-                      : '?'}
-                  </span>
-                  <span className="max-w-[8rem] truncate">
-                    {user ? user.firstName : t('login')}
-                  </span>
-                </Link>
-              </div>
-            </div>
-          </div>
-        )}
-
         {offline && (
           <div className="bg-warning-soft px-4 py-1.5 text-center text-xs font-medium text-warning-soft-foreground">
             {t('offline')}
@@ -369,25 +261,177 @@ export function AppShell() {
         )}
       </header>
 
-      {/* ── Main ───────────────────────────────────────────────── */}
+      {/* ═══════════════ DESKTOP HEADER ═══════════════ */}
+      {showDesktopChrome && (
+        <header className="sticky top-0 z-40 hidden border-b border-border/80 bg-card shadow-[0_1px_0_rgba(15,23,42,0.04)] md:block">
+          <div className="mx-auto flex h-[4.25rem] max-w-[1280px] items-center gap-6 px-6 lg:gap-10 lg:px-10">
+            {/* Brand */}
+            <Link to={roleHome} className="group flex shrink-0 items-center gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-bolt-700 text-white shadow-sm transition group-hover:bg-bolt-600">
+                <Bolt className="h-5 w-5 fill-current" />
+              </span>
+              <div className="leading-none">
+                <span className="font-display text-[1.35rem] font-extrabold tracking-tight text-foreground">
+                  Spare<span className="text-bolt-600">Bolt</span>
+                </span>
+                <p className="mt-1 text-[11px] font-medium tracking-wide text-muted-foreground">
+                  {t('tagline')}
+                </p>
+              </div>
+            </Link>
+
+            {/* Center search (customers only) */}
+            {!workMode && !isAuth && (
+              <form
+                onSubmit={onHeaderSearch}
+                className="mx-auto hidden min-w-0 max-w-xl flex-1 lg:block"
+              >
+                <label className="relative block">
+                  <span className="sr-only">{t('searchPlaceholder')}</span>
+                  <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <input
+                    value={headerQ}
+                    onChange={(e) => setHeaderQ(e.target.value)}
+                    placeholder={t('searchPlaceholder')}
+                    className="h-11 w-full rounded-full border border-border bg-[#f4f7f6] py-2 pl-10 pr-28 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-bolt-500 focus:bg-card focus:ring-2 focus:ring-bolt-500/20 dark:bg-muted"
+                  />
+                  <button
+                    type="submit"
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-full bg-bolt-700 px-4 py-1.5 text-xs font-bold text-white transition hover:bg-bolt-600"
+                  >
+                    {t('browse')}
+                  </button>
+                </label>
+              </form>
+            )}
+
+            {/* Text nav */}
+            {!isAuth && (
+              <nav
+                className={cn(
+                  'flex items-center gap-0.5',
+                  workMode ? 'ml-4 flex-1' : 'ml-auto',
+                )}
+                aria-label="Main"
+              >
+                {nav.map((item) => {
+                  const active = navItemActive(
+                    item,
+                    location.pathname,
+                    location.search,
+                  );
+                  return (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      end={item.end}
+                      className={cn(
+                        'relative px-3.5 py-2 text-[13px] font-semibold tracking-wide transition-colors',
+                        active
+                          ? 'text-bolt-800 dark:text-bolt-200'
+                          : 'text-steel-600 hover:text-foreground dark:text-muted-foreground dark:hover:text-foreground',
+                      )}
+                    >
+                      {item.label}
+                      {item.badge ? (
+                        <span className="ml-1.5 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-amber-signal px-1 text-[10px] font-bold text-steel-950">
+                          {item.badge}
+                        </span>
+                      ) : null}
+                      <span
+                        className={cn(
+                          'absolute inset-x-3 -bottom-[calc(1.125rem+1px)] h-[2px] rounded-full bg-bolt-600 transition-opacity',
+                          active ? 'opacity-100' : 'opacity-0',
+                        )}
+                      />
+                    </NavLink>
+                  );
+                })}
+              </nav>
+            )}
+
+            {/* Right tools */}
+            <div className={cn('flex shrink-0 items-center gap-1', isAuth && 'ml-auto')}>
+              <button
+                type="button"
+                onClick={toggleLang}
+                className="cursor-pointer rounded-lg px-2.5 py-1.5 text-[11px] font-bold uppercase tracking-wider text-muted-foreground hover:bg-muted hover:text-foreground"
+              >
+                {i18n.language === 'en' ? 'SW' : 'EN'}
+              </button>
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
+                aria-label={isDark ? t('lightMode') : t('darkMode')}
+              >
+                {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              </button>
+              {user && (
+                <Link
+                  to="/notifications"
+                  className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
+                  aria-label={t('notifications')}
+                >
+                  <Bell className="h-4 w-4" />
+                </Link>
+              )}
+              <div className="mx-1 h-6 w-px bg-border" />
+              <Link
+                to={user ? '/account' : '/auth/login'}
+                className="inline-flex items-center gap-2 rounded-full border border-border bg-card py-1 pl-1 pr-3 text-sm font-semibold text-foreground shadow-sm transition hover:border-bolt-400 hover:shadow"
+              >
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-bolt-600 to-bolt-800 text-[11px] font-bold text-white">
+                  {user
+                    ? `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}`.toUpperCase() ||
+                      'SB'
+                    : '?'}
+                </span>
+                <span className="max-w-[7rem] truncate">
+                  {user ? user.firstName : t('login')}
+                </span>
+              </Link>
+            </div>
+          </div>
+          {offline && (
+            <div className="bg-warning-soft px-4 py-1.5 text-center text-xs font-medium text-warning-soft-foreground">
+              {t('offline')}
+            </div>
+          )}
+        </header>
+      )}
+
+      {/* ═══════════════ MAIN ═══════════════ */}
       <main
         className={cn(
-          'mx-auto w-full max-w-7xl flex-1 px-4 py-4',
-          !hideMobileNav && 'pb-24 md:pb-10',
-          'md:px-6 md:py-8 lg:px-8',
+          'w-full flex-1',
+          /* mobile */
+          'px-4 py-4',
+          !hideMobileNav && 'pb-24',
+          /* desktop */
+          'md:px-0 md:py-0 md:pb-0',
         )}
       >
-        <Outlet />
+        <div
+          className={cn(
+            'mx-auto w-full',
+            /* mobile: no extra frame */
+            /* desktop: spacious canvas */
+            'md:max-w-[1280px] md:px-6 md:py-8 lg:px-10 lg:py-10',
+          )}
+        >
+          <Outlet />
+        </div>
       </main>
 
-      {/* ── Desktop footer ─────────────────────────────────────── */}
+      {/* ═══════════════ DESKTOP FOOTER ═══════════════ */}
       {showDesktopChrome && <SiteFooter />}
 
-      {/* ── Mobile bottom nav (unchanged) ──────────────────────── */}
+      {/* ═══════════════ MOBILE BOTTOM NAV (unchanged) ═══════════════ */}
       {!hideMobileNav && (
         <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-card/95 backdrop-blur-md safe-pb md:hidden">
           <ul className="mx-auto flex max-w-lg items-stretch justify-around px-1 pt-1">
-            {nav.map((item) => {
+            {(workMode ? nav : mobileCustomerNav).map((item) => {
               const Icon = item.icon;
               return (
                 <li key={item.to} className="flex-1">

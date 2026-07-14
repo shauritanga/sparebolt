@@ -8,7 +8,8 @@ const SUPPORT_EMAIL = 'support@ditronics.co.tz';
 const COPYRIGHT_YEAR = new Date().getFullYear();
 
 /**
- * Desktop-only site footer (hidden on mobile — bottom nav fills that role).
+ * Desktop-only site footer — professional multi-column marketplace footer.
+ * Hidden on mobile so bottom tabs remain uncluttered.
  */
 export function SiteFooter() {
   const { t } = useTranslation();
@@ -16,170 +17,146 @@ export function SiteFooter() {
   const driver = isDriverRole(user?.role);
   const seller = isSellerRole(user?.role);
 
+  const linkClass =
+    'text-sm text-steel-300 transition hover:text-white';
+
   return (
-    <footer className="mt-auto hidden border-t border-border bg-card md:block">
-      <div className="mx-auto max-w-7xl px-6 py-12 lg:px-8">
-        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="sm:col-span-2 lg:col-span-1">
-            <Link to="/" className="inline-flex items-center gap-2">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-bolt-700 text-white">
-                <Bolt className="h-5 w-5 fill-current" />
-              </span>
-              <span className="font-display text-lg font-extrabold tracking-tight text-foreground">
-                Spare<span className="text-bolt-500">Bolt</span>
-              </span>
-            </Link>
-            <p className="mt-3 max-w-xs text-sm leading-relaxed text-muted-foreground">
-              {t('footerTagline')}
-            </p>
-          </div>
+    <footer className="mt-auto hidden md:block">
+      {/* Main band */}
+      <div className="bg-steel-900 text-steel-100 dark:bg-steel-950">
+        <div className="mx-auto max-w-[1280px] px-6 py-14 lg:px-10">
+          <div className="grid gap-12 lg:grid-cols-12">
+            <div className="lg:col-span-4">
+              <Link to="/" className="inline-flex items-center gap-2.5">
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-bolt-600 text-white">
+                  <Bolt className="h-5 w-5 fill-current" />
+                </span>
+                <span className="font-display text-xl font-extrabold tracking-tight text-white">
+                  Spare<span className="text-bolt-400">Bolt</span>
+                </span>
+              </Link>
+              <p className="mt-4 max-w-sm text-sm leading-relaxed text-steel-400">
+                {t('footerTagline')}
+              </p>
+              <p className="mt-6 text-xs font-semibold uppercase tracking-widest text-steel-500">
+                Escrow · Delivery · Trust
+              </p>
+            </div>
 
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              {t('shopping')}
-            </p>
-            <ul className="mt-3 space-y-2 text-sm">
-              <li>
-                <Link
-                  to="/browse"
-                  className="font-medium text-foreground hover:text-bolt-700 dark:hover:text-bolt-300"
-                >
-                  {t('browse')}
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/orders"
-                  className="font-medium text-foreground hover:text-bolt-700 dark:hover:text-bolt-300"
-                >
-                  {t('orders')}
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/cart"
-                  className="font-medium text-foreground hover:text-bolt-700 dark:hover:text-bolt-300"
-                >
-                  {t('cart')}
-                </Link>
-              </li>
-            </ul>
-          </div>
+            <div className="grid gap-10 sm:grid-cols-3 lg:col-span-8">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-steel-500">
+                  {t('shopping')}
+                </p>
+                <ul className="mt-4 space-y-2.5">
+                  <li>
+                    <Link to="/browse" className={linkClass}>
+                      {t('browse')}
+                    </Link>
+                  </li>
+                  <li>
+                    <Link to="/orders" className={linkClass}>
+                      {t('orders')}
+                    </Link>
+                  </li>
+                  <li>
+                    <Link to="/cart" className={linkClass}>
+                      {t('cart')}
+                    </Link>
+                  </li>
+                </ul>
+              </div>
 
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              {t('earnWithUs')}
-            </p>
-            <ul className="mt-3 space-y-2 text-sm">
-              {seller ? (
-                <>
-                  <li>
-                    <Link
-                      to="/seller"
-                      className="font-medium text-foreground hover:text-bolt-700 dark:hover:text-bolt-300"
-                    >
-                      {t('dashboard')}
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
-                      to="/seller/listings"
-                      className="font-medium text-foreground hover:text-bolt-700 dark:hover:text-bolt-300"
-                    >
-                      {t('myListings')}
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
-                      to="/seller/sales"
-                      className="font-medium text-foreground hover:text-bolt-700 dark:hover:text-bolt-300"
-                    >
-                      {t('sales')}
-                    </Link>
-                  </li>
-                </>
-              ) : driver ? (
-                <>
-                  <li>
-                    <Link
-                      to="/driver"
-                      className="font-medium text-foreground hover:text-bolt-700 dark:hover:text-bolt-300"
-                    >
-                      {t('jobs')}
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
-                      to="/driver?tab=earnings"
-                      className="font-medium text-foreground hover:text-bolt-700 dark:hover:text-bolt-300"
-                    >
-                      {t('earnings')}
-                    </Link>
-                  </li>
-                </>
-              ) : (
-                <>
-                  <li>
-                    <Link
-                      to="/account/become-seller"
-                      className="font-medium text-foreground hover:text-bolt-700 dark:hover:text-bolt-300"
-                    >
-                      {t('becomeSeller')}
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
-                      to="/account/become-driver"
-                      className="font-medium text-foreground hover:text-bolt-700 dark:hover:text-bolt-300"
-                    >
-                      {t('becomeDriver')}
-                    </Link>
-                  </li>
-                </>
-              )}
-            </ul>
-          </div>
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-steel-500">
+                  {t('earnWithUs')}
+                </p>
+                <ul className="mt-4 space-y-2.5">
+                  {seller ? (
+                    <>
+                      <li>
+                        <Link to="/seller" className={linkClass}>
+                          {t('dashboard')}
+                        </Link>
+                      </li>
+                      <li>
+                        <Link to="/seller/listings" className={linkClass}>
+                          {t('myListings')}
+                        </Link>
+                      </li>
+                      <li>
+                        <Link to="/seller/sales" className={linkClass}>
+                          {t('sales')}
+                        </Link>
+                      </li>
+                    </>
+                  ) : driver ? (
+                    <>
+                      <li>
+                        <Link to="/driver" className={linkClass}>
+                          {t('jobs')}
+                        </Link>
+                      </li>
+                      <li>
+                        <Link to="/driver?tab=earnings" className={linkClass}>
+                          {t('earnings')}
+                        </Link>
+                      </li>
+                    </>
+                  ) : (
+                    <>
+                      <li>
+                        <Link to="/account/become-seller" className={linkClass}>
+                          {t('becomeSeller')}
+                        </Link>
+                      </li>
+                      <li>
+                        <Link to="/account/become-driver" className={linkClass}>
+                          {t('becomeDriver')}
+                        </Link>
+                      </li>
+                    </>
+                  )}
+                </ul>
+              </div>
 
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              {t('support')}
-            </p>
-            <ul className="mt-3 space-y-2 text-sm">
-              <li>
-                <Link
-                  to="/account"
-                  className="font-medium text-foreground hover:text-bolt-700 dark:hover:text-bolt-300"
-                >
-                  {t('account')}
-                </Link>
-              </li>
-              <li>
-                <a
-                  href={`mailto:${SUPPORT_EMAIL}`}
-                  className="font-medium text-foreground hover:text-bolt-700 dark:hover:text-bolt-300"
-                >
-                  {t('helpSupport')}
-                </a>
-              </li>
-              <li>
-                <a
-                  href={`mailto:${SUPPORT_EMAIL}`}
-                  className="text-muted-foreground hover:text-foreground"
-                >
-                  {SUPPORT_EMAIL}
-                </a>
-              </li>
-            </ul>
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-steel-500">
+                  {t('support')}
+                </p>
+                <ul className="mt-4 space-y-2.5">
+                  <li>
+                    <Link to="/account" className={linkClass}>
+                      {t('account')}
+                    </Link>
+                  </li>
+                  <li>
+                    <a href={`mailto:${SUPPORT_EMAIL}`} className={linkClass}>
+                      {t('helpSupport')}
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href={`mailto:${SUPPORT_EMAIL}`}
+                      className="text-sm text-steel-500 transition hover:text-steel-300"
+                    >
+                      {SUPPORT_EMAIL}
+                    </a>
+                  </li>
+                </ul>
+              </div>
+            </div>
           </div>
         </div>
+      </div>
 
-        <div className="mt-10 flex flex-col items-start justify-between gap-3 border-t border-border pt-6 sm:flex-row sm:items-center">
-          <p className="text-xs text-muted-foreground">
+      {/* Legal bar */}
+      <div className="border-t border-white/5 bg-steel-950">
+        <div className="mx-auto flex max-w-[1280px] flex-col items-start justify-between gap-2 px-6 py-4 text-xs text-steel-500 sm:flex-row sm:items-center lg:px-10">
+          <p>
             © {COPYRIGHT_YEAR} Ditronics. {t('footerRights')}
           </p>
-          <p className="text-xs text-muted-foreground">
-            SpareBolt · {t('tagline')}
-          </p>
+          <p className="text-steel-600">SpareBolt · {t('tagline')}</p>
         </div>
       </div>
     </footer>
