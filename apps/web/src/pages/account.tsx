@@ -205,6 +205,10 @@ export function AccountPage() {
     );
   }
 
+  const initials =
+    `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}`.toUpperCase() ||
+    'SB';
+
   const shopping: MenuRow[] = [
     {
       key: 'orders',
@@ -333,21 +337,33 @@ export function AccountPage() {
 
   return (
     <div className="mx-auto max-w-md space-y-5">
-      {/* Profile card — high contrast, role + name + phone only */}
+      {/* Profile card — avatar + role, name, phone (high contrast) */}
       <div className="rounded-3xl border border-bolt-900/20 bg-bolt-800 p-5 text-white shadow-md dark:border-bolt-700/40 dark:bg-bolt-950">
-        <p className="text-xs font-bold uppercase tracking-wider text-bolt-100/90">
-          {user.role}
-        </p>
-        <h1 className="mt-1 font-display text-2xl font-extrabold leading-snug text-white">
-          {user.firstName} {user.lastName}
-        </h1>
-        {user.phone ? (
-          <p className="mt-2 text-base font-medium text-white/95">{user.phone}</p>
-        ) : (
-          <p className="mt-2 text-sm font-medium text-white/70">
-            {t('noContact')}
-          </p>
-        )}
+        <div className="flex items-center gap-4">
+          <span
+            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/20 text-lg font-extrabold tracking-wide text-white ring-2 ring-white/30"
+            aria-hidden
+          >
+            {initials}
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-bold uppercase tracking-wider text-bolt-100">
+              {user.role}
+            </p>
+            <h1 className="mt-0.5 font-display text-xl font-extrabold leading-snug text-white sm:text-2xl">
+              {user.firstName} {user.lastName}
+            </h1>
+            {user.phone ? (
+              <p className="mt-1.5 text-base font-medium text-white/95">
+                {user.phone}
+              </p>
+            ) : (
+              <p className="mt-1.5 text-sm font-medium text-white/70">
+                {t('noContact')}
+              </p>
+            )}
+          </div>
+        </div>
       </div>
 
       {user.sellerProfile?.status === 'PENDING' && (
