@@ -491,19 +491,107 @@ export function OrderDetailPage() {
         ))}
       </ul>
 
+      {/* Driver rating — after package is delivered */}
+      {(order.status === 'DELIVERED' || order.status === 'CONFIRMED') &&
+        order.delivery?.driverId && (
+          <div className="space-y-2 rounded-2xl border border-border bg-card p-4">
+            <div className="flex items-start gap-2">
+              <Navigation className="mt-0.5 h-4 w-4 shrink-0 text-bolt-700 dark:text-bolt-300" />
+              <div className="min-w-0">
+                <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                  Rate the driver
+                </p>
+                <p className="font-semibold text-foreground">
+                  {order.delivery.driver?.name ||
+                    order.tracking?.driver?.name ||
+                    'Your driver'}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  After delivery — speed, handling, communication
+                </p>
+                {(order.delivery.driver?.vehiclePlate ||
+                  order.tracking?.driver?.vehiclePlate) && (
+                  <p className="text-xs text-muted-foreground">
+                    {order.delivery.driver?.vehicleType ||
+                      order.tracking?.driver?.vehicleType}{' '}
+                    ·{' '}
+                    {order.delivery.driver?.vehiclePlate ||
+                      order.tracking?.driver?.vehiclePlate}
+                  </p>
+                )}
+              </div>
+            </div>
+            {order.reviews?.find(
+              (r) => r.driverId === order.delivery?.driverId,
+            ) ? (
+              (() => {
+                const existing = order.reviews!.find(
+                  (r) => r.driverId === order.delivery?.driverId,
+                )!;
+                return (
+                  <p className="rounded-xl bg-muted/60 px-3 py-2 text-sm">
+                    You rated this driver <strong>{existing.rating}★</strong>
+                    {existing.comment ? (
+                      <span className="mt-1 block text-muted-foreground">
+                        “{existing.comment}”
+                      </span>
+                    ) : null}
+                  </p>
+                );
+              })()
+            ) : (
+              <>
+                <StarPicker
+                  value={driverDraft.rating}
+                  onChange={(rating) =>
+                    setDriverDraft((d) => ({ ...d, rating }))
+                  }
+                />
+                <Input
+                  placeholder="Comment about delivery (optional)"
+                  value={driverDraft.comment}
+                  onChange={(e) =>
+                    setDriverDraft((d) => ({
+                      ...d,
+                      comment: e.target.value,
+                    }))
+                  }
+                />
+                <Button
+                  variant="secondary"
+                  className="w-full"
+                  disabled={driverDraft.submitting}
+                  onClick={() => void submitDriverReview()}
+                >
+                  {driverDraft.submitting
+                    ? 'Submitting…'
+                    : 'Submit driver rating'}
+                </Button>
+              </>
+            )}
+          </div>
+        )}
+
+      {/* Confirm receipt closes the deal — then seller can be rated */}
       {order.status === 'DELIVERED' && (
-        <Button size="lg" className="w-full" onClick={() => void confirm()}>
-          {t('confirmReceipt')}
-        </Button>
+        <div className="space-y-2">
+          <Button size="lg" className="w-full" onClick={() => void confirm()}>
+            {t('confirmReceipt')}
+          </Button>
+          <p className="text-center text-xs text-muted-foreground">
+            Confirm when the parts are correct — this releases escrow to the
+            seller, then you can rate the shop.
+          </p>
+        </div>
       )}
 
-      {(order.status === 'CONFIRMED' || order.status === 'DELIVERED') && (
+      {/* Seller rating — only after confirm receipt (deal closed) */}
+      {order.status === 'CONFIRMED' && (
         <div className="space-y-3">
           <div>
-            <h3 className="font-display text-lg font-bold">Rate separately</h3>
+            <h3 className="font-display text-lg font-bold">Rate the seller</h3>
             <p className="text-xs text-muted-foreground">
-              Seller and driver are scored independently so each gets the
-              rating they earned.
+              After you confirmed receipt — rate parts quality and the shop.
             </p>
           </div>
 
@@ -534,8 +622,7 @@ export function OrderDetailPage() {
                 </div>
                 {existing ? (
                   <p className="rounded-xl bg-muted/60 px-3 py-2 text-sm">
-                    You rated this seller{' '}
-                    <strong>{existing.rating}★</strong>
+                    You rated this seller <strong>{existing.rating}★</strong>
                     {existing.comment ? (
                       <span className="mt-1 block text-muted-foreground">
                         “{existing.comment}”
@@ -583,83 +670,6 @@ export function OrderDetailPage() {
               </div>
             );
           })}
-
-          {order.delivery?.driverId && (
-            <div className="space-y-2 rounded-2xl border border-border bg-card p-4">
-              <div className="flex items-start gap-2">
-                <Navigation className="mt-0.5 h-4 w-4 shrink-0 text-bolt-700 dark:text-bolt-300" />
-                <div className="min-w-0">
-                  <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                    Driver
-                  </p>
-                  <p className="font-semibold text-foreground">
-                    {order.delivery.driver?.name ||
-                      order.tracking?.driver?.name ||
-                      'Your driver'}
-                  </p>
-                  {(order.delivery.driver?.vehiclePlate ||
-                    order.tracking?.driver?.vehiclePlate) && (
-                    <p className="text-xs text-muted-foreground">
-                      {order.delivery.driver?.vehicleType ||
-                        order.tracking?.driver?.vehicleType}{' '}
-                      ·{' '}
-                      {order.delivery.driver?.vehiclePlate ||
-                        order.tracking?.driver?.vehiclePlate}
-                    </p>
-                  )}
-                </div>
-              </div>
-              {order.reviews?.find(
-                (r) => r.driverId === order.delivery?.driverId,
-              ) ? (
-                (() => {
-                  const existing = order.reviews!.find(
-                    (r) => r.driverId === order.delivery?.driverId,
-                  )!;
-                  return (
-                    <p className="rounded-xl bg-muted/60 px-3 py-2 text-sm">
-                      You rated this driver{' '}
-                      <strong>{existing.rating}★</strong>
-                      {existing.comment ? (
-                        <span className="mt-1 block text-muted-foreground">
-                          “{existing.comment}”
-                        </span>
-                      ) : null}
-                    </p>
-                  );
-                })()
-              ) : (
-                <>
-                  <StarPicker
-                    value={driverDraft.rating}
-                    onChange={(rating) =>
-                      setDriverDraft((d) => ({ ...d, rating }))
-                    }
-                  />
-                  <Input
-                    placeholder="Comment about delivery (optional)"
-                    value={driverDraft.comment}
-                    onChange={(e) =>
-                      setDriverDraft((d) => ({
-                        ...d,
-                        comment: e.target.value,
-                      }))
-                    }
-                  />
-                  <Button
-                    variant="secondary"
-                    className="w-full"
-                    disabled={driverDraft.submitting}
-                    onClick={() => void submitDriverReview()}
-                  >
-                    {driverDraft.submitting
-                      ? 'Submitting…'
-                      : 'Submit driver rating'}
-                  </Button>
-                </>
-              )}
-            </div>
-          )}
         </div>
       )}
     </div>

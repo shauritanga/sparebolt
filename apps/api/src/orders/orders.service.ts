@@ -441,12 +441,6 @@ export class OrdersService {
       },
     });
     if (!order || order.customerId !== userId) throw new ForbiddenException();
-    if (
-      order.status !== OrderStatus.CONFIRMED &&
-      order.status !== OrderStatus.DELIVERED
-    ) {
-      throw new BadRequestException('Can only review completed deliveries');
-    }
     if (dto.rating < 1 || dto.rating > 5) {
       throw new BadRequestException('Rating must be 1-5');
     }
@@ -460,17 +454,21 @@ export class OrdersService {
     }
 
     if (hasSeller) {
+      // Seller: only after customer confirms receipt (deal closed / escrow released)
+      if (order.status !== OrderStatus.CONFIRMED) {
+        throw new BadRequestException(
+          'Rate the seller after you confirm receipt',
+        );
+      }
       const onOrder = order.items.some((i) => i.sellerId === dto.sellerId);
       if (!onOrder) {
         throw new BadRequestException('Seller is not part of this order');
       }
-      const already = order.reviews.some(
-        (r) => r.sellerId === dto.sellerId && !r.driverId,
-      );
-      // also treat any review with this sellerId as already done
       const alreadyAny = order.reviews.some((r) => r.sellerId === dto.sellerId);
-      if (already || alreadyAny) {
-        throw new BadRequestException('You already rated this seller for this order');
+      if (alreadyAny) {
+        throw new BadRequestException(
+          'You already rated this seller for this order',
+        );
       }
 
       const review = await this.prisma.review.create({
@@ -487,14 +485,24 @@ export class OrdersService {
       return review;
     }
 
-    // Driver-only review
+    // Driver: after package is delivered (still allowed after confirm if skipped)
+    if (
+      order.status !== OrderStatus.DELIVERED &&
+      order.status !== OrderStatus.CONFIRMED
+    ) {
+      throw new BadRequestException(
+        'Rate the driver after the package is delivered',
+      );
+    }
     const driverId = dto.driverId!;
     if (!order.delivery?.driverId || order.delivery.driverId !== driverId) {
       throw new BadRequestException('Driver is not assigned to this order');
     }
     const alreadyDriver = order.reviews.some((r) => r.driverId === driverId);
     if (alreadyDriver) {
-      throw new BadRequestException('You already rated this driver for this order');
+      throw new BadRequestException(
+        'You already rated this driver for this order',
+      );
     }
 
     const review = await this.prisma.review.create({
