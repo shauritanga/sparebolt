@@ -7,6 +7,7 @@ import { api } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth-store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 
 export function LoginPage() {
   const { t } = useTranslation();
@@ -87,12 +88,12 @@ export function LoginPage() {
             onChange={(e) => setEmail(e.target.value)}
             required
           />
-          <Input
-            type="password"
+          <PasswordInput
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
+            autoComplete="current-password"
           />
           <Button type="submit" className="w-full" loading={loading}>
             {t('login')}
@@ -134,10 +135,7 @@ export function LoginPage() {
         </form>
       )}
 
-      <p className="mt-4 text-center text-sm text-muted-foreground">
-        Demo: customer@sparebolt.tz / password123
-      </p>
-      <p className="mt-2 text-center text-sm">
+      <p className="mt-4 text-center text-sm">
         No account?{' '}
         <Link to="/auth/register" className="font-semibold text-bolt-700 dark:text-bolt-300">
           {t('register')}
@@ -205,13 +203,13 @@ export function RegisterPage() {
           value={form.phone}
           onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
         />
-        <Input
-          type="password"
+        <PasswordInput
           placeholder="Password (min 6)"
           value={form.password}
           onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
           required
           minLength={6}
+          autoComplete="new-password"
         />
         <Button type="submit" className="w-full" loading={loading}>
           {t('register')}
