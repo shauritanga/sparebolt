@@ -9,13 +9,26 @@ import {
   Bell,
   Moon,
   Sun,
+  Briefcase,
+  Navigation,
+  Wallet,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useCartStore } from '@/stores/cart-store';
 import { useAuthStore } from '@/stores/auth-store';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/hooks/use-theme';
+import { isDriverRole } from '@/lib/role-home';
 import { useEffect, useState } from 'react';
+
+type NavItem = {
+  to: string;
+  icon: typeof Home;
+  label: string;
+  badge?: number;
+  end?: boolean;
+  match?: (pathname: string, search: string) => boolean;
+};
 
 export function AppShell() {
   const { t, i18n } = useTranslation();
@@ -25,6 +38,7 @@ export function AppShell() {
   const location = useLocation();
   const { isDark, toggleTheme } = useTheme();
   const [offline, setOffline] = useState(!navigator.onLine);
+  const driverMode = isDriverRole(user?.role);
 
   useEffect(() => {
     void refreshMe();
@@ -75,13 +89,46 @@ export function AppShell() {
     localStorage.setItem('sb_locale', next);
   };
 
-  const nav = [
-    { to: '/', icon: Home, label: t('home') },
+  // Customer shell vs driver-first shell (professional driver apps land on jobs)
+  const customerNav: NavItem[] = [
+    { to: '/', icon: Home, label: t('home'), end: true },
     { to: '/browse', icon: Search, label: t('browse') },
     { to: '/cart', icon: ShoppingCart, label: t('cart'), badge: cartCount },
     { to: '/orders', icon: Package, label: t('orders') },
     { to: '/account', icon: User, label: t('account') },
   ];
+
+  const driverNav: NavItem[] = [
+    {
+      to: '/driver',
+      icon: Briefcase,
+      label: t('jobs'),
+      end: true,
+      match: (path, search) =>
+        path === '/driver' &&
+        (!new URLSearchParams(search).get('tab') ||
+          new URLSearchParams(search).get('tab') === 'available'),
+    },
+    {
+      to: '/driver?tab=active',
+      icon: Navigation,
+      label: t('activeJobs'),
+      match: (path, search) =>
+        path === '/driver' &&
+        new URLSearchParams(search).get('tab') === 'active',
+    },
+    {
+      to: '/driver?tab=earnings',
+      icon: Wallet,
+      label: t('earnings'),
+      match: (path, search) =>
+        path === '/driver' &&
+        new URLSearchParams(search).get('tab') === 'earnings',
+    },
+    { to: '/account', icon: User, label: t('account') },
+  ];
+
+  const nav = driverMode ? driverNav : customerNav;
 
   // Admin console uses its own full-width shell (no consumer chrome)
   if (isAdmin) {
@@ -101,7 +148,10 @@ export function AppShell() {
     <div className="mx-auto flex min-h-dvh max-w-lg flex-col bg-background md:max-w-none">
       <header className="sticky top-0 z-40 border-b border-border bg-card/95 backdrop-blur-md safe-pt">
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-3 px-4">
-          <Link to="/" className="flex items-center gap-2">
+          <Link
+            to={driverMode ? '/driver' : '/'}
+            className="flex items-center gap-2"
+          >
             <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-bolt-700 text-white shadow-sm">
               <Bolt className="h-5 w-5 fill-current" />
             </span>
@@ -140,18 +190,21 @@ export function AppShell() {
                 <Bell className="h-5 w-5" />
               </Link>
             )}
-            <Link
-              to="/cart"
-              className="relative rounded-xl p-2.5 text-muted-foreground hover:bg-muted hover:text-foreground min-h-[44px] min-w-[44px] flex items-center justify-center md:hidden"
-              aria-label={t('cart')}
-            >
-              <ShoppingCart className="h-5 w-5" />
-              {cartCount > 0 && (
-                <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-signal px-1 text-[10px] font-bold text-steel-950">
-                  {cartCount}
-                </span>
-              )}
-            </Link>
+            {/* Cart in header for shoppers; drivers use job-focused chrome */}
+            {!driverMode && (
+              <Link
+                to="/cart"
+                className="relative rounded-xl p-2.5 text-muted-foreground hover:bg-muted hover:text-foreground min-h-[44px] min-w-[44px] flex items-center justify-center md:hidden"
+                aria-label={t('cart')}
+              >
+                <ShoppingCart className="h-5 w-5" />
+                {cartCount > 0 && (
+                  <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-signal px-1 text-[10px] font-bold text-steel-950">
+                    {cartCount}
+                  </span>
+                )}
+              </Link>
+            )}
           </div>
         </div>
         {offline && (
@@ -173,19 +226,29 @@ export function AppShell() {
       {!hideNav && (
         <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-card/95 backdrop-blur-md safe-pb md:hidden">
           <ul className="mx-auto flex max-w-lg items-stretch justify-around px-1 pt-1">
-            {nav.map(({ to, icon: Icon, label, badge }) => (
+            {nav.map(({ to, icon: Icon, label, badge, end, match }) => (
               <li key={to} className="flex-1">
                 <NavLink
                   to={to}
-                  end={to === '/'}
-                  className={({ isActive }) =>
-                    cn(
+                  end={end}
+                  className={() => {
+                    let isActive = false;
+                    if (match) {
+                      isActive = match(location.pathname, location.search);
+                    } else if (end) {
+                      isActive = location.pathname === to;
+                    } else {
+                      isActive =
+                        location.pathname === to ||
+                        location.pathname.startsWith(`${to}/`);
+                    }
+                    return cn(
                       'flex flex-col items-center gap-0.5 py-2 text-[10px] font-semibold transition-colors min-h-[52px]',
                       isActive
                         ? 'text-bolt-600 dark:text-bolt-400'
                         : 'text-muted-foreground',
-                    )
-                  }
+                    );
+                  }}
                 >
                   <span className="relative">
                     <Icon className="h-5 w-5" strokeWidth={2.25} />

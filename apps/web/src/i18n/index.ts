@@ -54,8 +54,11 @@ const resources = {
       myListings: 'My listings',
       sales: 'Sales',
       jobs: 'Jobs',
+      activeJobs: 'Active',
       availableJobs: 'Available jobs',
       earnings: 'Earnings',
+      shopAsCustomer: 'Shop as customer',
+      shopAsCustomerHint: 'Browse parts and place orders',
       dashboard: 'Dashboard',
       trustTitle: 'Pay with confidence',
       trustBody:
@@ -167,8 +170,11 @@ const resources = {
       myListings: 'Orodha zangu',
       sales: 'Mauzo',
       jobs: 'Kazi',
+      activeJobs: 'Inayoendelea',
       availableJobs: 'Kazi zinazopatikana',
       earnings: 'Mapato',
+      shopAsCustomer: 'Nunua kama mteja',
+      shopAsCustomerHint: 'Tafuta sehemu na weka oda',
       dashboard: 'Dashibodi',
       trustTitle: 'Lipa kwa ujasiri',
       trustBody:

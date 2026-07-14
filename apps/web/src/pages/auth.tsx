@@ -5,6 +5,7 @@ import { Bolt } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth-store';
+import { postAuthPath } from '@/lib/role-home';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PasswordInput } from '@/components/ui/password-input';
@@ -13,7 +14,7 @@ export function LoginPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
-  const from = (location.state as { from?: string })?.from || '/';
+  const from = (location.state as { from?: string })?.from;
   const { login, loginWithOtp, loading } = useAuthStore();
   const [mode, setMode] = useState<'password' | 'otp'>('password');
   const [email, setEmail] = useState('');
@@ -23,12 +24,17 @@ export function LoginPage() {
   const [otpSent, setOtpSent] = useState(false);
   const [debugCode, setDebugCode] = useState('');
 
+  const goHome = () => {
+    const user = useAuthStore.getState().user;
+    void navigate(postAuthPath(user, from), { replace: true });
+  };
+
   const onPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       await login({ email, password });
       toast.success('Welcome back');
-      void navigate(from);
+      goHome();
     } catch {
       toast.error('Invalid credentials');
     }
@@ -50,7 +56,7 @@ export function LoginPage() {
     try {
       await loginWithOtp(phone, otp);
       toast.success('Logged in');
-      void navigate(from);
+      goHome();
     } catch {
       toast.error('Invalid OTP');
     }
@@ -162,7 +168,8 @@ export function RegisterPage() {
     try {
       await register(form);
       toast.success('Account created');
-      void navigate('/');
+      const user = useAuthStore.getState().user;
+      void navigate(postAuthPath(user), { replace: true });
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })
         ?.response?.data?.message;

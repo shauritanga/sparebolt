@@ -213,7 +213,18 @@ export function AccountPage() {
     `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}`.toUpperCase() ||
     'SB';
 
-  const shopping: MenuRow[] = [
+  const shopping: MenuRow[] = [];
+  // Drivers can still shop, but it's secondary to jobs
+  if (user.role === 'DRIVER') {
+    shopping.push({
+      key: 'shop',
+      label: t('shopAsCustomer'),
+      icon: ShoppingCart,
+      to: '/browse',
+      hint: t('shopAsCustomerHint'),
+    });
+  }
+  shopping.push(
     {
       key: 'orders',
       label: t('orders'),
@@ -226,7 +237,10 @@ export function AccountPage() {
       label: t('cart'),
       icon: ShoppingCart,
       to: '/cart',
-      hint: cartCount > 0 ? t('cartItems', { count: cartCount }) : t('cartEmptyShort'),
+      hint:
+        cartCount > 0
+          ? t('cartItems', { count: cartCount })
+          : t('cartEmptyShort'),
       trailing:
         cartCount > 0 ? (
           <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-signal px-1.5 text-[10px] font-bold text-steel-950">
@@ -241,7 +255,7 @@ export function AccountPage() {
       to: '/notifications',
       hint: t('notificationsHint'),
     },
-  ];
+  );
 
   const earn: MenuRow[] = [];
   if (user.role === 'SELLER' || user.role === 'ADMIN') {

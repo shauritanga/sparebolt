@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Search,
@@ -14,6 +14,8 @@ import { ListingCard } from '@/components/listing-card';
 import { PromoCarousel } from '@/components/promo-carousel';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { useAuthStore } from '@/stores/auth-store';
+import { isDriverRole } from '@/lib/role-home';
 
 const categoryIcons: Record<string, string> = {
   engine: '⚙️',
@@ -29,12 +31,14 @@ const categoryIcons: Record<string, string> = {
 export function HomePage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const role = useAuthStore((s) => s.user?.role);
   const [q, setQ] = useState('');
   const [listings, setListings] = useState<Listing[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (isDriverRole(role)) return;
     let cancelled = false;
     (async () => {
       try {
@@ -55,12 +59,17 @@ export function HomePage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [role]);
 
   const onSearch = (e: React.FormEvent) => {
     e.preventDefault();
     void navigate(`/browse?q=${encodeURIComponent(q)}`);
   };
+
+  // Drivers land on jobs workspace, not the customer marketplace home
+  if (isDriverRole(role)) {
+    return <Navigate to="/driver" replace />;
+  }
 
   return (
     <div className="space-y-8">

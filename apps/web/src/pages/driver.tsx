@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { MapPin, Navigation, Power, Store, X } from 'lucide-react';
 import { api } from '@/lib/api';
@@ -6,6 +7,13 @@ import { formatTZS } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useAuthStore } from '@/stores/auth-store';
+
+type DriverTab = 'available' | 'active' | 'earnings';
+
+function tabFromSearch(raw: string | null): DriverTab {
+  if (raw === 'active' || raw === 'earnings') return raw;
+  return 'available';
+}
 
 type Job = {
   id: string;
@@ -44,6 +52,7 @@ function readGps(): Promise<{ lat: number; lng: number } | null> {
 export function DriverPage() {
   const driverProfile = useAuthStore((s) => s.user?.driverProfile);
   const refreshMe = useAuthStore((s) => s.refreshMe);
+  const [searchParams, setSearchParams] = useSearchParams();
   const [available, setAvailable] = useState<Job[]>([]);
   const [mine, setMine] = useState<Job[]>([]);
   const [earnings, setEarnings] = useState<{
@@ -52,9 +61,14 @@ export function DriverPage() {
     ratingAvg: number;
   } | null>(null);
   const [online, setOnline] = useState(!!driverProfile?.isOnline);
-  const [tab, setTab] = useState<'available' | 'active' | 'earnings'>(
-    'available',
-  );
+  const tab = tabFromSearch(searchParams.get('tab'));
+  const setTab = (next: DriverTab) => {
+    if (next === 'available') {
+      setSearchParams({}, { replace: true });
+    } else {
+      setSearchParams({ tab: next }, { replace: true });
+    }
+  };
   const [locHint, setLocHint] = useState<string | null>(null);
   const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const watchIdRef = useRef<number | null>(null);
