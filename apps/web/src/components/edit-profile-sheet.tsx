@@ -107,8 +107,17 @@ export function EditProfileSheet({ open, onClose, user }: Props) {
       const res = await uploadImage(file);
       setAvatarUrl(res.url);
       toast.success(t('photoUploaded'));
-    } catch {
-      toast.error(t('uploadFailed'));
+    } catch (err: unknown) {
+      const status = (err as { response?: { status?: number } })?.response
+        ?.status;
+      const msg = (err as { response?: { data?: { message?: string | string[] } } })
+        ?.response?.data?.message;
+      const detail = Array.isArray(msg) ? msg.join(', ') : msg;
+      if (status === 401) {
+        toast.error(t('uploadFailed'));
+      } else {
+        toast.error(detail || t('uploadFailed'));
+      }
     } finally {
       setUploading(false);
     }

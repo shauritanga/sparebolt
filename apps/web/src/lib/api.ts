@@ -8,10 +8,42 @@ export const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('sb_token');
+  // Prefer live auth store token, fall back to localStorage
+  const token =
+    localStorage.getItem('sb_token') ||
+    (typeof window !== 'undefined'
+      ? // zustand persist key may hold token before sb_token is mirrored
+        (() => {
+          try {
+            const raw = localStorage.getItem('sb-auth');
+            if (!raw) return null;
+            const parsed = JSON.parse(raw) as { state?: { token?: string } };
+            return parsed?.state?.token || null;
+          } catch {
+            return null;
+          }
+        })()
+      : null);
+
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+    // Keep mirror in sync for other callers
+    if (!localStorage.getItem('sb_token')) {
+      localStorage.setItem('sb_token', token);
+    }
   }
+
+  // FormData must NOT use application/json — browser sets multipart + boundary.
+  // Without this, Multer never receives the file and upload "fails".
+  if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
+    if (typeof config.headers.set === 'function') {
+      config.headers.set('Content-Type', false as unknown as string);
+    } else {
+      delete (config.headers as Record<string, unknown>)['Content-Type'];
+      delete (config.headers as Record<string, unknown>)['content-type'];
+    }
+  }
+
   return config;
 });
 
