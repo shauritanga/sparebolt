@@ -8,10 +8,8 @@ import {
   Languages,
   LayoutDashboard,
   LogOut,
-  Mail,
   Moon,
   Package,
-  Phone,
   ShoppingCart,
   Store,
   Sun,
@@ -207,8 +205,6 @@ export function AccountPage() {
     );
   }
 
-  const initials = `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}`.toUpperCase() || 'SB';
-
   const shopping: MenuRow[] = [
     {
       key: 'orders',
@@ -337,41 +333,21 @@ export function AccountPage() {
 
   return (
     <div className="mx-auto max-w-md space-y-5">
-      {/* Profile card */}
-      <div className="relative overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-bolt-800 to-steel-900 p-5 text-white shadow-md">
-        <div className="flex items-start gap-3">
-          <span
-            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/15 text-lg font-extrabold tracking-wide text-white ring-2 ring-white/20"
-            aria-hidden
-          >
-            {initials}
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-bolt-200">
-              {user.role}
-            </p>
-            <h1 className="font-display text-xl font-extrabold leading-tight sm:text-2xl">
-              {user.firstName} {user.lastName}
-            </h1>
-            <div className="mt-1.5 space-y-0.5 text-sm text-bolt-100/85">
-              {user.email && (
-                <p className="flex items-center gap-1.5 truncate">
-                  <Mail className="h-3.5 w-3.5 shrink-0 opacity-80" />
-                  <span className="truncate">{user.email}</span>
-                </p>
-              )}
-              {user.phone && (
-                <p className="flex items-center gap-1.5 truncate">
-                  <Phone className="h-3.5 w-3.5 shrink-0 opacity-80" />
-                  <span className="truncate">{user.phone}</span>
-                </p>
-              )}
-              {!user.email && !user.phone && (
-                <p className="text-bolt-100/70">{t('noContact')}</p>
-              )}
-            </div>
-          </div>
-        </div>
+      {/* Profile card — high contrast, role + name + phone only */}
+      <div className="rounded-3xl border border-bolt-900/20 bg-bolt-800 p-5 text-white shadow-md dark:border-bolt-700/40 dark:bg-bolt-950">
+        <p className="text-xs font-bold uppercase tracking-wider text-bolt-100/90">
+          {user.role}
+        </p>
+        <h1 className="mt-1 font-display text-2xl font-extrabold leading-snug text-white">
+          {user.firstName} {user.lastName}
+        </h1>
+        {user.phone ? (
+          <p className="mt-2 text-base font-medium text-white/95">{user.phone}</p>
+        ) : (
+          <p className="mt-2 text-sm font-medium text-white/70">
+            {t('noContact')}
+          </p>
+        )}
       </div>
 
       {user.sellerProfile?.status === 'PENDING' && (
