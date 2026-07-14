@@ -15,7 +15,7 @@ import { PromoCarousel } from '@/components/promo-carousel';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/stores/auth-store';
-import { isDriverRole } from '@/lib/role-home';
+import { isDriverRole, isSellerRole } from '@/lib/role-home';
 
 const categoryIcons: Record<string, string> = {
   engine: '⚙️',
@@ -38,7 +38,7 @@ export function HomePage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (isDriverRole(role)) return;
+    if (isDriverRole(role) || isSellerRole(role)) return;
     let cancelled = false;
     (async () => {
       try {
@@ -66,9 +66,12 @@ export function HomePage() {
     void navigate(`/browse?q=${encodeURIComponent(q)}`);
   };
 
-  // Drivers land on jobs workspace, not the customer marketplace home
+  // Work roles land on their workspace, not the customer marketplace home
   if (isDriverRole(role)) {
     return <Navigate to="/driver" replace />;
+  }
+  if (isSellerRole(role)) {
+    return <Navigate to="/seller" replace />;
   }
 
   return (

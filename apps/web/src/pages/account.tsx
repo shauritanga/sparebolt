@@ -214,8 +214,8 @@ export function AccountPage() {
     'SB';
 
   const shopping: MenuRow[] = [];
-  // Drivers can still shop, but it's secondary to jobs
-  if (user.role === 'DRIVER') {
+  // Drivers / sellers can still shop; secondary to their work home
+  if (user.role === 'DRIVER' || user.role === 'SELLER') {
     shopping.push({
       key: 'shop',
       label: t('shopAsCustomer'),

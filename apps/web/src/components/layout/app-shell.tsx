@@ -12,13 +12,15 @@ import {
   Briefcase,
   Navigation,
   Wallet,
+  LayoutDashboard,
+  Store,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useCartStore } from '@/stores/cart-store';
 import { useAuthStore } from '@/stores/auth-store';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/hooks/use-theme';
-import { isDriverRole } from '@/lib/role-home';
+import { isDriverRole, isSellerRole } from '@/lib/role-home';
 import { useEffect, useState } from 'react';
 
 type NavItem = {
@@ -39,6 +41,10 @@ export function AppShell() {
   const { isDark, toggleTheme } = useTheme();
   const [offline, setOffline] = useState(!navigator.onLine);
   const driverMode = isDriverRole(user?.role);
+  const sellerMode = isSellerRole(user?.role);
+  /** Work-mode chrome (hide cart; role home logo) — not pure shoppers */
+  const workMode = driverMode || sellerMode;
+  const roleHome = driverMode ? '/driver' : sellerMode ? '/seller' : '/';
 
   useEffect(() => {
     void refreshMe();
@@ -89,7 +95,7 @@ export function AppShell() {
     localStorage.setItem('sb_locale', next);
   };
 
-  // Customer shell vs driver-first shell (professional driver apps land on jobs)
+  // Role-aware shells: customers shop; drivers/sellers get work-first nav
   const customerNav: NavItem[] = [
     { to: '/', icon: Home, label: t('home'), end: true },
     { to: '/browse', icon: Search, label: t('browse') },
@@ -128,7 +134,35 @@ export function AppShell() {
     { to: '/account', icon: User, label: t('account') },
   ];
 
-  const nav = driverMode ? driverNav : customerNav;
+  // Dashboard · Listings · Sales · Account (promos stay on dashboard)
+  const sellerNav: NavItem[] = [
+    {
+      to: '/seller',
+      icon: LayoutDashboard,
+      label: t('dashboard'),
+      end: true,
+      match: (path) => path === '/seller',
+    },
+    {
+      to: '/seller/listings',
+      icon: Store,
+      label: t('myListings'),
+      match: (path) => path.startsWith('/seller/listings'),
+    },
+    {
+      to: '/seller/sales',
+      icon: Wallet,
+      label: t('sales'),
+      match: (path) => path.startsWith('/seller/sales'),
+    },
+    { to: '/account', icon: User, label: t('account') },
+  ];
+
+  const nav = driverMode
+    ? driverNav
+    : sellerMode
+      ? sellerNav
+      : customerNav;
 
   // Admin console uses its own full-width shell (no consumer chrome)
   if (isAdmin) {
@@ -148,10 +182,7 @@ export function AppShell() {
     <div className="mx-auto flex min-h-dvh max-w-lg flex-col bg-background md:max-w-none">
       <header className="sticky top-0 z-40 border-b border-border bg-card/95 backdrop-blur-md safe-pt">
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-3 px-4">
-          <Link
-            to={driverMode ? '/driver' : '/'}
-            className="flex items-center gap-2"
-          >
+          <Link to={roleHome} className="flex items-center gap-2">
             <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-bolt-700 text-white shadow-sm">
               <Bolt className="h-5 w-5 fill-current" />
             </span>
@@ -190,8 +221,8 @@ export function AppShell() {
                 <Bell className="h-5 w-5" />
               </Link>
             )}
-            {/* Cart in header for shoppers; drivers use job-focused chrome */}
-            {!driverMode && (
+            {/* Cart for shoppers; work roles use role-focused chrome */}
+            {!workMode && (
               <Link
                 to="/cart"
                 className="relative rounded-xl p-2.5 text-muted-foreground hover:bg-muted hover:text-foreground min-h-[44px] min-w-[44px] flex items-center justify-center md:hidden"

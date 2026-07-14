@@ -21,3 +21,7 @@ export function postAuthPath(
 export function isDriverRole(role?: string | null) {
   return role === 'DRIVER';
 }
+
+export function isSellerRole(role?: string | null) {
+  return role === 'SELLER';
+}
