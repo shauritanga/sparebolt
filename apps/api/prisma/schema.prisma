@@ -298,6 +298,7 @@ model DriverProfile {
   // ── Ops ──
   latitude        Float?
   longitude       Float?
+  locationUpdatedAt DateTime?
   isOnline        Boolean        @default(false)
   status          ApprovalStatus @default(PENDING)
   rejectionReason String?
@@ -307,9 +308,10 @@ model DriverProfile {
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
 
-  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  deliveries Delivery[]
-  reviews    Review[]    @relation("DriverReviews")
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deliveries     Delivery[]
+  reviews        Review[]       @relation("DriverReviews")
+  dispatchOffers DispatchOffer[]
 
   @@index([status, isOnline, city])
   @@index([nationalId])
@@ -593,26 +595,55 @@ model Delivery {
   orderId         String         @unique
   driverId        String?
   status          DeliveryStatus @default(REQUESTED)
+  /// Shop / listing pickup coordinates (dispatch match point)
   pickupLat       Float?
   pickupLng       Float?
+  pickupCity      String?
+  pickupLabel     String?        // shop / business name for driver UI
   dropoffLat      Float?
   dropoffLng      Float?
   currentLat      Float?
   currentLng      Float?
   fee             Decimal        @db.Decimal(12, 2) @default(0)
   rejectReason    String?
+  /// Marketplace dispatch: 0 = not started, 1–3 = ring broadcast level
+  dispatchRing    Int            @default(0)
+  /// When the next ring should expand (null = finished or not scheduled)
+  dispatchNextAt  DateTime?
   acceptedAt      DateTime?
   pickedUpAt      DateTime?
   deliveredAt     DateTime?
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
 
-  order  Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  driver DriverProfile? @relation(fields: [driverId], references: [id])
+  order          Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  driver         DriverProfile?  @relation(fields: [driverId], references: [id])
+  dispatchOffers DispatchOffer[]
 
   @@index([driverId, status])
   @@index([status])
+  @@index([status, dispatchNextAt])
   @@map("deliveries")
+}
+
+/// Tracks which drivers were offered a job (prevents re-spam; records declines)
+model DispatchOffer {
+  id         String   @id @default(cuid())
+  deliveryId String
+  driverId   String
+  ring       Int
+  /// NOTIFIED | DECLINED
+  status     String   @default("NOTIFIED")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  delivery Delivery      @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+  driver   DriverProfile @relation(fields: [driverId], references: [id], onDelete: Cascade)
+
+  @@unique([deliveryId, driverId])
+  @@index([deliveryId, status])
+  @@index([driverId])
+  @@map("dispatch_offers")
 }
 
 // ─── Reviews & Disputes ──────────────────────────────────────────────────────

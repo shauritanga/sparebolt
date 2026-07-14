@@ -359,58 +359,11 @@ export class OrdersService {
     });
   }
 
-  /** Called after successful payment webhook */
+  /**
+   * Alternate path to complete payment + start driver dispatch.
+   * Prefer PaymentsService.completePayment for webhooks.
+   */
   async markPaidAndHoldEscrow(orderId: string, providerRef?: string) {
-    const order = await this.prisma.order.findUnique({
-      where: { id: orderId },
-      include: { payment: true },
-    });
-    if (!order) return null;
-
-    const updated = await this.prisma.$transaction(async (tx) => {
-      await tx.payment.update({
-        where: { orderId },
-        data: {
-          status: 'COMPLETED',
-          providerRef,
-          paidAt: new Date(),
-        },
-      });
-
-      await tx.escrow.create({
-        data: {
-          orderId,
-          amount: order.total,
-          platformFee: order.platformFee,
-          sellerAmount: Number(order.subtotal) - Number(order.platformFee),
-          status: 'HELD',
-        },
-      });
-
-      await tx.delivery.create({
-        data: {
-          orderId,
-          status: 'REQUESTED',
-          fee: order.deliveryFee,
-          dropoffLat: undefined,
-          dropoffLng: undefined,
-        },
-      });
-
-      return tx.order.update({
-        where: { id: orderId },
-        data: { status: OrderStatus.AWAITING_DRIVER },
-        include: { escrow: true, delivery: true, payment: true },
-      });
-    });
-
-    await this.notifications.notify(order.customerId, {
-      type: 'PAYMENT',
-      title: 'Payment received',
-      body: `Your payment for ${order.orderNumber} is held in escrow until delivery`,
-      data: { orderId },
-    });
-
-    return updated;
+    return this.payments.completePayment(orderId, providerRef);
   }
 }

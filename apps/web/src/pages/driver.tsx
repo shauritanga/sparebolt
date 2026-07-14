@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { MapPin, Navigation, Power } from 'lucide-react';
+import { MapPin, Navigation, Power, Store, X } from 'lucide-react';
 import { api } from '@/lib/api';
 import { formatTZS } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,12 @@ type Job = {
   id: string;
   status: string;
   fee: string | number;
+  pickupLabel?: string | null;
+  pickupCity?: string | null;
+  pickupLat?: number | null;
+  pickupLng?: number | null;
+  distanceKm?: number | null;
+  matchReason?: string;
   order: {
     orderNumber: string;
     total: string | number;
@@ -20,8 +26,24 @@ type Job = {
   };
 };
 
+function readGps(): Promise<{ lat: number; lng: number } | null> {
+  if (!navigator.geolocation) return Promise.resolve(null);
+  return new Promise((resolve) => {
+    navigator.geolocation.getCurrentPosition(
+      (pos) =>
+        resolve({
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+        }),
+      () => resolve(null),
+      { enableHighAccuracy: true, maximumAge: 30_000, timeout: 12_000 },
+    );
+  });
+}
+
 export function DriverPage() {
   const driverProfile = useAuthStore((s) => s.user?.driverProfile);
+  const refreshMe = useAuthStore((s) => s.refreshMe);
   const [available, setAvailable] = useState<Job[]>([]);
   const [mine, setMine] = useState<Job[]>([]);
   const [earnings, setEarnings] = useState<{
@@ -29,33 +51,97 @@ export function DriverPage() {
     completedJobs: number;
     ratingAvg: number;
   } | null>(null);
-  const [online, setOnline] = useState(true);
+  const [online, setOnline] = useState(!!driverProfile?.isOnline);
   const [tab, setTab] = useState<'available' | 'active' | 'earnings'>(
     'available',
   );
+  const [locHint, setLocHint] = useState<string | null>(null);
+  const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const approved = driverProfile?.status === 'APPROVED';
 
-  const load = () => {
+  const load = useCallback(() => {
     if (!approved) return;
     void api.get('/driver/jobs/available').then((r) => setAvailable(r.data));
     void api.get('/driver/jobs').then((r) => setMine(r.data));
     void api.get('/driver/earnings').then((r) => setEarnings(r.data));
-  };
+  }, [approved]);
+
+  const pushLocation = useCallback(async () => {
+    if (!online || !approved) return;
+    const coords = await readGps();
+    if (!coords) {
+      setLocHint(
+        'Location unavailable — jobs match by city until GPS is allowed',
+      );
+      return;
+    }
+    setLocHint(null);
+    try {
+      await api.patch('/driver/location', coords);
+    } catch {
+      /* ignore heartbeat errors */
+    }
+  }, [online, approved]);
+
+  useEffect(() => {
+    setOnline(!!driverProfile?.isOnline);
+  }, [driverProfile?.isOnline]);
 
   useEffect(() => {
     load();
     if (!approved) return;
     const iv = setInterval(load, 8000);
     return () => clearInterval(iv);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [approved]);
+  }, [approved, load]);
+
+  // GPS heartbeat while online (dispatch distance matching)
+  useEffect(() => {
+    if (heartbeatRef.current) {
+      clearInterval(heartbeatRef.current);
+      heartbeatRef.current = null;
+    }
+    if (!online || !approved) return;
+
+    void pushLocation();
+    heartbeatRef.current = setInterval(() => {
+      void pushLocation();
+    }, 45_000);
+
+    return () => {
+      if (heartbeatRef.current) {
+        clearInterval(heartbeatRef.current);
+        heartbeatRef.current = null;
+      }
+    };
+  }, [online, approved, pushLocation]);
 
   const toggleOnline = async () => {
     const next = !online;
-    await api.patch('/driver/online', { isOnline: next });
-    setOnline(next);
-    toast.success(next ? 'You are online' : 'You are offline');
+    const coords = next ? await readGps() : null;
+    try {
+      const { data } = await api.patch('/driver/online', {
+        isOnline: next,
+        ...(coords ? { lat: coords.lat, lng: coords.lng } : {}),
+      });
+      setOnline(data.isOnline ?? next);
+      void refreshMe();
+      if (next && !coords) {
+        toast.message('You are online', {
+          description:
+            'Enable location for nearby job matching. Falling back to city.',
+        });
+        setLocHint(
+          'Location unavailable — jobs match by city until GPS is allowed',
+        );
+      } else {
+        toast.success(next ? 'You are online' : 'You are offline');
+        setLocHint(null);
+      }
+      load();
+    } catch {
+      toast.error('Could not update online status');
+    }
   };
 
   const accept = async (id: string) => {
@@ -65,7 +151,17 @@ export function DriverPage() {
       load();
       setTab('active');
     } catch {
-      toast.error('Could not accept job');
+      toast.error('Could not accept job — may already be taken');
+    }
+  };
+
+  const decline = async (id: string) => {
+    try {
+      await api.post(`/driver/jobs/${id}/reject`, { reason: 'busy' });
+      toast.message('Job declined');
+      load();
+    } catch {
+      toast.error('Could not decline');
     }
   };
 
@@ -77,8 +173,12 @@ export function DriverPage() {
     };
     const next = flow[job.status];
     if (!next) return;
+    const coords = await readGps();
     try {
-      await api.patch(`/driver/jobs/${job.id}/status`, { status: next });
+      await api.patch(`/driver/jobs/${job.id}/status`, {
+        status: next,
+        ...(coords ? { lat: coords.lat, lng: coords.lng } : {}),
+      });
       toast.success(`Status: ${next}`);
       load();
     } catch {
@@ -122,6 +222,18 @@ export function DriverPage() {
         </Button>
       </div>
 
+      {locHint && online && (
+        <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-100">
+          {locHint}
+        </p>
+      )}
+
+      {!online && (
+        <p className="rounded-xl border border-border bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
+          Go online to receive job push notifications near shops in your area.
+        </p>
+      )}
+
       <div className="flex rounded-xl bg-muted p-1">
         {(['available', 'active', 'earnings'] as const).map((t) => (
           <button
@@ -129,7 +241,9 @@ export function DriverPage() {
             type="button"
             onClick={() => setTab(t)}
             className={`flex-1 rounded-lg py-2 text-xs font-bold capitalize cursor-pointer min-h-[40px] ${
-              tab === t ? 'bg-card shadow-sm text-bolt-800 dark:text-bolt-200' : 'text-muted-foreground'
+              tab === t
+                ? 'bg-card shadow-sm text-bolt-800 dark:text-bolt-200'
+                : 'text-muted-foreground'
             }`}
           >
             {t}
@@ -148,11 +262,27 @@ export function DriverPage() {
                 <p className="font-mono text-xs text-muted-foreground">
                   {j.order.orderNumber}
                 </p>
-                <p className="font-bold text-bolt-800 dark:text-bolt-200">{formatTZS(j.fee)}</p>
+                <p className="font-bold text-bolt-800 dark:text-bolt-200">
+                  {formatTZS(j.fee)}
+                </p>
               </div>
+
+              {(j.pickupLabel || j.pickupCity) && (
+                <p className="mt-2 flex items-start gap-1 text-sm font-semibold">
+                  <Store className="mt-0.5 h-4 w-4 shrink-0 text-bolt-700 dark:text-bolt-300" />
+                  Pickup: {j.pickupLabel || j.pickupCity}
+                  {j.distanceKm != null && (
+                    <span className="font-normal text-muted-foreground">
+                      {' '}
+                      · ~{j.distanceKm.toFixed(1)} km
+                    </span>
+                  )}
+                </p>
+              )}
+
               <p className="mt-1 flex items-start gap-1 text-sm">
-                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-bolt-700 dark:text-bolt-300" />
-                {j.order.address.street}
+                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                Drop-off: {j.order.address.street}
                 {j.order.address.area ? `, ${j.order.address.area}` : ''},{' '}
                 {j.order.address.city}
               </p>
@@ -167,12 +297,22 @@ export function DriverPage() {
                 <Button className="flex-1" onClick={() => void accept(j.id)}>
                   Accept
                 </Button>
+                <Button
+                  variant="secondary"
+                  className="px-3"
+                  onClick={() => void decline(j.id)}
+                  aria-label="Decline job"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
               </div>
             </li>
           ))}
           {!available.length && (
             <p className="py-10 text-center text-sm text-muted-foreground">
-              No nearby jobs right now
+              {online
+                ? 'No nearby jobs right now'
+                : 'Go online to see available jobs'}
             </p>
           )}
         </ul>
@@ -191,8 +331,14 @@ export function DriverPage() {
                   <p className="font-mono text-xs">{j.order.orderNumber}</p>
                   <Badge>{j.status}</Badge>
                 </div>
-                <p className="mt-2 text-sm font-semibold">
-                  {j.order.address.street}, {j.order.address.city}
+                {(j.pickupLabel || j.pickupCity) && (
+                  <p className="mt-2 flex items-start gap-1 text-sm font-semibold">
+                    <Store className="mt-0.5 h-4 w-4 shrink-0" />
+                    Pickup: {j.pickupLabel || j.pickupCity}
+                  </p>
+                )}
+                <p className="mt-1 text-sm">
+                  Drop-off: {j.order.address.street}, {j.order.address.city}
                 </p>
                 {j.order.customer.phone && (
                   <a

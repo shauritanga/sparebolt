@@ -74,12 +74,27 @@ export class DeliveriesController {
     return this.deliveries.updateLocation(userId, id, body.lat, body.lng);
   }
 
+  /** Live position heartbeat for dispatch matching (while online). */
+  @Patch('location')
+  driverLocation(
+    @CurrentUser('id') userId: string,
+    @Body() body: { lat: number; lng: number },
+  ) {
+    return this.deliveries.updateDriverLocation(userId, body.lat, body.lng);
+  }
+
   @Patch('online')
   online(
     @CurrentUser('id') userId: string,
-    @Body() body: { isOnline: boolean },
+    @Body() body: { isOnline: boolean; lat?: number; lng?: number },
   ) {
-    return this.deliveries.setOnline(userId, body.isOnline);
+    return this.deliveries.setOnline(
+      userId,
+      body.isOnline,
+      body.lat != null && body.lng != null
+        ? { lat: body.lat, lng: body.lng }
+        : undefined,
+    );
   }
 
   @Get('earnings')

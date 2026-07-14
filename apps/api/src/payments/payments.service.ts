@@ -1,6 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
+import { DispatchService } from '../deliveries/dispatch.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 export type InitiatePaymentInput = {
   orderId: string;
@@ -20,6 +22,8 @@ export class PaymentsService {
   constructor(
     private config: ConfigService,
     private prisma: PrismaService,
+    private dispatch: DispatchService,
+    private notifications: NotificationsService,
   ) {}
 
   async initiatePayment(input: InitiatePaymentInput) {
@@ -159,11 +163,13 @@ export class PaymentsService {
   async completePayment(orderId: string, providerRef?: string) {
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
-      include: { payment: true, escrow: true },
+      include: { payment: true, escrow: true, address: true },
     });
     if (!order || order.escrow) return order;
 
-    return this.prisma.$transaction(async (tx) => {
+    const pickup = await this.dispatch.resolvePickup(orderId);
+
+    const updated = await this.prisma.$transaction(async (tx) => {
       await tx.payment.update({
         where: { orderId },
         data: {
@@ -188,6 +194,13 @@ export class PaymentsService {
           orderId,
           status: 'REQUESTED',
           fee: order.deliveryFee,
+          pickupLat: pickup.lat ?? undefined,
+          pickupLng: pickup.lng ?? undefined,
+          pickupCity: pickup.city ?? undefined,
+          pickupLabel: pickup.label ?? undefined,
+          dropoffLat: pickup.dropoffLat ?? order.address?.latitude ?? undefined,
+          dropoffLng: pickup.dropoffLng ?? order.address?.longitude ?? undefined,
+          dispatchRing: 0,
         },
       });
 
@@ -197,5 +210,20 @@ export class PaymentsService {
         include: { escrow: true, delivery: true, payment: true },
       });
     });
+
+    await this.notifications.notify(order.customerId, {
+      type: 'PAYMENT',
+      title: 'Payment received',
+      body: `Your payment for ${order.orderNumber} is held in escrow until delivery`,
+      data: { orderId, link: `/orders/${orderId}` },
+    });
+
+    // Marketplace dispatch: ring 1 around shop (async, non-blocking for webhook)
+    const deliveryId = updated.delivery?.id;
+    if (deliveryId) {
+      void this.dispatch.startDispatch(deliveryId);
+    }
+
+    return updated;
   }
 }

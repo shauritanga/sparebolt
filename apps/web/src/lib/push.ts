@@ -118,6 +118,8 @@ export async function registerWebPush(): Promise<{
         n.onclick = () => {
           window.focus();
           if (link) window.location.href = link;
+          else if (payload.data?.kind === 'driver_job')
+            window.location.href = '/driver';
           else window.location.href = '/notifications';
         };
       } catch {

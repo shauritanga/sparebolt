@@ -7,12 +7,14 @@ import {
 import { DeliveryStatus, OrderStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { DispatchService, haversineKm } from './dispatch.service';
 
 @Injectable()
 export class DeliveriesService {
   constructor(
     private prisma: PrismaService,
     private notifications: NotificationsService,
+    private dispatch: DispatchService,
   ) {}
 
   private async getDriver(userId: string) {
@@ -25,17 +27,28 @@ export class DeliveriesService {
     return driver;
   }
 
+  /**
+   * Open jobs visible to this driver: approved, online, near shop (or city),
+   * not declined, first-accept-wins still unassigned.
+   */
   async availableJobs(userId: string) {
     const driver = await this.getDriver(userId);
-    return this.prisma.delivery.findMany({
+    if (!driver.isOnline) {
+      return [];
+    }
+
+    const open = await this.prisma.delivery.findMany({
       where: {
         status: 'REQUESTED',
         driverId: null,
-        order: {
-          status: OrderStatus.AWAITING_DRIVER,
-          address: driver.city
-            ? { city: { equals: driver.city, mode: 'insensitive' } }
-            : undefined,
+        order: { status: OrderStatus.AWAITING_DRIVER },
+        NOT: {
+          dispatchOffers: {
+            some: {
+              driverId: driver.id,
+              status: 'DECLINED',
+            },
+          },
         },
       },
       include: {
@@ -50,7 +63,43 @@ export class DeliveriesService {
         },
       },
       orderBy: { createdAt: 'asc' },
+      take: 50,
     });
+
+    const withMeta: Array<
+      (typeof open)[number] & {
+        distanceKm: number | null;
+        matchReason: string;
+      }
+    > = [];
+
+    for (const job of open) {
+      const { ok, distanceKm } = await this.dispatch.driverCanSeeJob(
+        driver,
+        job,
+      );
+      if (!ok) continue;
+
+      let matchReason = 'city';
+      if (
+        distanceKm != null &&
+        job.pickupLat != null &&
+        job.pickupLng != null
+      ) {
+        matchReason = 'distance';
+      }
+
+      withMeta.push({ ...job, distanceKm, matchReason });
+    }
+
+    withMeta.sort((a, b) => {
+      if (a.distanceKm == null && b.distanceKm == null) return 0;
+      if (a.distanceKm == null) return 1;
+      if (b.distanceKm == null) return -1;
+      return a.distanceKm - b.distanceKm;
+    });
+
+    return withMeta;
   }
 
   async myJobs(userId: string) {
@@ -74,6 +123,10 @@ export class DeliveriesService {
 
   async accept(userId: string, deliveryId: string) {
     const driver = await this.getDriver(userId);
+    if (!driver.isOnline) {
+      throw new BadRequestException('Go online to accept jobs');
+    }
+
     const delivery = await this.prisma.delivery.findUnique({
       where: { id: deliveryId },
       include: { order: true },
@@ -83,43 +136,86 @@ export class DeliveriesService {
       throw new BadRequestException('Job no longer available');
     }
 
-    const result = await this.prisma.$transaction([
-      this.prisma.delivery.update({
-        where: { id: deliveryId },
+    // Must still be in dispatch range (or previously offered)
+    const canSee = await this.dispatch.driverCanSeeJob(driver, {
+      id: delivery.id,
+      pickupLat: delivery.pickupLat,
+      pickupLng: delivery.pickupLng,
+      pickupCity: delivery.pickupCity,
+      dispatchRing: delivery.dispatchRing,
+    });
+    const wasOffered = await this.prisma.dispatchOffer.findFirst({
+      where: {
+        deliveryId,
+        driverId: driver.id,
+        status: 'NOTIFIED',
+      },
+    });
+    if (!canSee.ok && !wasOffered) {
+      throw new BadRequestException('Job is outside your dispatch area');
+    }
+
+    // One active job at a time
+    const active = await this.prisma.delivery.findFirst({
+      where: {
+        driverId: driver.id,
+        status: { in: ['ACCEPTED', 'PICKED_UP', 'IN_TRANSIT'] },
+      },
+    });
+    if (active) {
+      throw new BadRequestException('Finish your current job before accepting another');
+    }
+
+    // Atomic claim — first accept wins under concurrent drivers
+    const claimed = await this.prisma.$transaction(async (tx) => {
+      const res = await tx.delivery.updateMany({
+        where: {
+          id: deliveryId,
+          status: 'REQUESTED',
+          driverId: null,
+        },
         data: {
           driverId: driver.id,
           status: 'ACCEPTED',
           acceptedAt: new Date(),
+          dispatchNextAt: null,
         },
-      }),
-      this.prisma.order.update({
+      });
+      if (res.count === 0) {
+        throw new BadRequestException('Job no longer available');
+      }
+      await tx.order.update({
         where: { id: delivery.orderId },
         data: { status: OrderStatus.DRIVER_ASSIGNED },
-      }),
-    ]);
+      });
+      return tx.delivery.findUnique({ where: { id: deliveryId } });
+    });
 
     await this.notifications.notify(delivery.order.customerId, {
       type: 'DELIVERY',
       title: 'Driver assigned',
       body: 'A driver has accepted your delivery',
-      data: { orderId: delivery.orderId, deliveryId },
+      data: {
+        orderId: delivery.orderId,
+        deliveryId,
+        link: `/orders/${delivery.orderId}`,
+      },
     });
 
-    return result;
+    return claimed;
   }
 
   async reject(userId: string, deliveryId: string, reason?: string) {
-    await this.getDriver(userId);
+    const driver = await this.getDriver(userId);
     const delivery = await this.prisma.delivery.findUnique({
       where: { id: deliveryId },
     });
     if (!delivery) throw new NotFoundException();
-    // Driver simply declines a request they haven't accepted — no state change needed for open jobs
-    return {
-      message: 'Declined',
-      reason: reason || 'busy',
-      deliveryId,
-    };
+    if (delivery.driverId && delivery.driverId !== driver.id) {
+      throw new BadRequestException('Job already taken');
+    }
+    // Decline open offer — will not be re-offered
+    return this.dispatch.recordDecline(deliveryId, driver.id, reason);
   }
 
   async updateStatus(
@@ -182,11 +278,26 @@ export class DeliveriesService {
       }),
     ]);
 
+    if (location) {
+      await this.prisma.driverProfile.update({
+        where: { id: driver.id },
+        data: {
+          latitude: location.lat,
+          longitude: location.lng,
+          locationUpdatedAt: new Date(),
+        },
+      });
+    }
+
     await this.notifications.notify(delivery.order.customerId, {
       type: 'DELIVERY',
       title: `Delivery ${status.toLowerCase().replace('_', ' ')}`,
       body: `Order ${delivery.order.orderNumber}: ${status}`,
-      data: { orderId: delivery.orderId, status },
+      data: {
+        orderId: delivery.orderId,
+        status,
+        link: `/orders/${delivery.orderId}`,
+      },
     });
 
     if (status === 'DELIVERED') {
@@ -215,7 +326,11 @@ export class DeliveriesService {
 
     await this.prisma.driverProfile.update({
       where: { id: driver.id },
-      data: { latitude: lat, longitude: lng },
+      data: {
+        latitude: lat,
+        longitude: lng,
+        locationUpdatedAt: new Date(),
+      },
     });
 
     return this.prisma.delivery.update({
@@ -224,11 +339,70 @@ export class DeliveriesService {
     });
   }
 
-  async setOnline(userId: string, isOnline: boolean) {
+  /**
+   * Heartbeat: update live driver position while online (dispatch uses this).
+   */
+  async updateDriverLocation(userId: string, lat: number, lng: number) {
     const driver = await this.getDriver(userId);
+    if (
+      !Number.isFinite(lat) ||
+      !Number.isFinite(lng) ||
+      Math.abs(lat) > 90 ||
+      Math.abs(lng) > 180
+    ) {
+      throw new BadRequestException('Invalid coordinates');
+    }
     return this.prisma.driverProfile.update({
       where: { id: driver.id },
-      data: { isOnline },
+      data: {
+        latitude: lat,
+        longitude: lng,
+        locationUpdatedAt: new Date(),
+      },
+      select: {
+        id: true,
+        latitude: true,
+        longitude: true,
+        locationUpdatedAt: true,
+        isOnline: true,
+      },
+    });
+  }
+
+  async setOnline(
+    userId: string,
+    isOnline: boolean,
+    location?: { lat: number; lng: number },
+  ) {
+    const driver = await this.getDriver(userId);
+    const data: {
+      isOnline: boolean;
+      latitude?: number;
+      longitude?: number;
+      locationUpdatedAt?: Date;
+    } = { isOnline };
+
+    if (
+      location &&
+      Number.isFinite(location.lat) &&
+      Number.isFinite(location.lng)
+    ) {
+      data.latitude = location.lat;
+      data.longitude = location.lng;
+      data.locationUpdatedAt = new Date();
+    }
+
+    return this.prisma.driverProfile.update({
+      where: { id: driver.id },
+      data,
+      select: {
+        id: true,
+        isOnline: true,
+        latitude: true,
+        longitude: true,
+        locationUpdatedAt: true,
+        city: true,
+      },
     });
   }
 
@@ -246,5 +420,13 @@ export class DeliveriesService {
       ratingAvg: driver.ratingAvg,
       ratingCount: driver.ratingCount,
     };
+  }
+
+  /** Distance helper for tests / callers */
+  distanceKm(
+    a: { lat: number; lng: number },
+    b: { lat: number; lng: number },
+  ) {
+    return haversineKm(a.lat, a.lng, b.lat, b.lng);
   }
 }
