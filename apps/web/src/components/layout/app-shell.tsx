@@ -202,20 +202,18 @@ export function AppShell() {
                   location.pathname,
                   location.search,
                 );
-                const Icon = item.icon;
                 return (
                   <NavLink
                     key={item.to}
                     to={item.to}
                     end={item.end}
                     className={cn(
-                      'relative inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition-colors',
+                      'relative inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-semibold transition-colors',
                       active
                         ? 'bg-bolt-700/10 text-bolt-800 dark:bg-bolt-500/15 dark:text-bolt-200'
                         : 'text-muted-foreground hover:bg-muted hover:text-foreground',
                     )}
                   >
-                    <Icon className="h-4 w-4 shrink-0" strokeWidth={2.25} />
                     <span className="truncate">{item.label}</span>
                     {item.badge ? (
                       <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-signal px-1.5 text-[10px] font-bold text-steel-950">
@@ -232,12 +230,9 @@ export function AppShell() {
             {!workMode && !hideNav && (
               <Link
                 to="/browse"
-                className="mr-1 hidden items-center gap-2 rounded-xl border border-border bg-muted/40 px-3 py-1.5 text-sm text-muted-foreground transition hover:border-bolt-300 hover:text-foreground lg:inline-flex"
+                className="mr-1 hidden max-w-[12rem] truncate rounded-xl border border-border bg-muted/40 px-3 py-1.5 text-sm text-muted-foreground transition hover:border-bolt-300 hover:text-foreground lg:inline-flex"
               >
-                <Search className="h-4 w-4" />
-                <span className="max-w-[10rem] truncate">
-                  {t('searchPlaceholder')}
-                </span>
+                {t('searchPlaceholder')}
               </Link>
             )}
             <button
