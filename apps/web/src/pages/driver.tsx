@@ -255,7 +255,7 @@ export function DriverPage() {
 
   if (driverProfile && !approved) {
     return (
-      <div className="mx-auto max-w-lg space-y-4 py-8 text-center">
+      <div className="mx-auto max-w-lg space-y-4 py-8 text-center md:max-w-2xl">
         <h1 className="font-display text-2xl font-extrabold">Driver</h1>
         <div className="panel-warning p-6 text-left">
           <Badge variant="warning">{driverProfile.status}</Badge>
@@ -276,9 +276,16 @@ export function DriverPage() {
   }
 
   return (
-    <div className="mx-auto max-w-lg space-y-4">
+    <div className="mx-auto max-w-lg space-y-4 md:max-w-4xl">
       <div className="flex items-center justify-between">
-        <h1 className="font-display text-2xl font-extrabold">Driver</h1>
+        <div>
+          <h1 className="font-display text-2xl font-extrabold md:text-3xl">
+            Driver
+          </h1>
+          <p className="hidden text-sm text-muted-foreground md:block">
+            Go online, accept nearby jobs, and share live location with customers.
+          </p>
+        </div>
         <Button
           variant={online ? 'default' : 'secondary'}
           size="sm"
@@ -301,7 +308,8 @@ export function DriverPage() {
         </p>
       )}
 
-      <div className="flex rounded-xl bg-muted p-1">
+      {/* Tabs only needed on mobile; desktop uses sidebar / top nav */}
+      <div className="flex rounded-xl bg-muted p-1 md:hidden">
         {(['available', 'active', 'earnings'] as const).map((t) => (
           <button
             key={t}
@@ -319,7 +327,7 @@ export function DriverPage() {
       </div>
 
       {tab === 'available' && (
-        <ul className="space-y-3">
+        <ul className="grid gap-3 sm:grid-cols-2">
           {available.map((j) => (
             <li
               key={j.id}
@@ -386,7 +394,7 @@ export function DriverPage() {
       )}
 
       {tab === 'active' && (
-        <ul className="space-y-3">
+        <ul className="grid gap-3 sm:grid-cols-2">
           {mine
             .filter((j) => j.status !== 'DELIVERED' && j.status !== 'REJECTED')
             .map((j) => (
@@ -442,7 +450,7 @@ export function DriverPage() {
       )}
 
       {tab === 'earnings' && earnings && (
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-3 md:max-w-xl">
           <div className="rounded-2xl border border-border bg-card p-4 text-center">
             <p className="text-xs text-muted-foreground">Total</p>
             <p className="font-display font-bold text-bolt-800 dark:text-bolt-200">

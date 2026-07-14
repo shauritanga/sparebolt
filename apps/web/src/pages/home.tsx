@@ -75,7 +75,7 @@ export function HomePage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 md:space-y-10">
       {/* Seller-subscribed promo carousel (auto-slides) */}
       <PromoCarousel />
 
@@ -139,7 +139,7 @@ export function HomePage() {
           {t('featured')}
         </h2>
         {loading ? (
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
             {Array.from({ length: 4 }).map((_, i) => (
               <div
                 key={i}
@@ -148,7 +148,7 @@ export function HomePage() {
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
             {listings.map((l) => (
               <ListingCard key={l.id} listing={l} />
             ))}

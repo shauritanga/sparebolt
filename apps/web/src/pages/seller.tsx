@@ -66,10 +66,10 @@ export function SellerDashboardPage() {
   ];
 
   return (
-    <div className="mx-auto max-w-3xl space-y-5">
-      <div className="flex items-center justify-between">
+    <div className="mx-auto max-w-3xl space-y-5 lg:max-w-5xl">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-extrabold">
+          <h1 className="font-display text-2xl font-extrabold md:text-3xl">
             {data.businessName}
           </h1>
           <p className="text-sm text-muted-foreground">Seller dashboard</p>

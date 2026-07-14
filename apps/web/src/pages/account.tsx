@@ -362,7 +362,7 @@ export function AccountPage() {
   ];
 
   return (
-    <div className="mx-auto max-w-md space-y-5">
+    <div className="mx-auto max-w-md space-y-5 md:max-w-3xl">
       {/* Profile card — avatar + role, name, phone (high contrast) */}
       <button
         type="button"
@@ -436,14 +436,16 @@ export function AccountPage() {
         </div>
       )}
 
-      <MenuSection title={t('shopping')} rows={shopping} />
-      <MenuSection title={t('earnWithUs')} rows={earn} />
-      <MenuSection title={t('preferences')} rows={preferences} />
-      <MenuSection title={t('support')} rows={support} />
+      <div className="grid gap-5 md:grid-cols-2">
+        <MenuSection title={t('shopping')} rows={shopping} />
+        <MenuSection title={t('earnWithUs')} rows={earn} />
+        <MenuSection title={t('preferences')} rows={preferences} />
+        <MenuSection title={t('support')} rows={support} />
+      </div>
 
       <Button
         variant="secondary"
-        className="w-full"
+        className="w-full md:max-w-xs"
         onClick={() => {
           logout();
           void navigate('/');

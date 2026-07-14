@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Navigation, Phone, Star, Store, MapPin } from 'lucide-react';
 import { api, type Order } from '@/lib/api';
-import { formatRelative, formatTZS } from '@/lib/utils';
+import { cn, formatRelative, formatTZS } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -55,8 +55,10 @@ export function OrdersPage() {
   }
 
   return (
-    <div className="mx-auto max-w-lg space-y-4">
-      <h1 className="font-display text-2xl font-extrabold">{t('orders')}</h1>
+    <div className="mx-auto max-w-lg space-y-4 md:max-w-3xl">
+      <h1 className="font-display text-2xl font-extrabold md:text-3xl">
+        {t('orders')}
+      </h1>
       {!orders.length && (
         <p className="py-12 text-center text-sm text-muted-foreground">
           No orders yet.{' '}
@@ -68,12 +70,12 @@ export function OrdersPage() {
           </Link>
         </p>
       )}
-      <ul className="space-y-3">
+      <ul className="grid gap-3 sm:grid-cols-2">
         {orders.map((o) => (
           <li key={o.id}>
             <Link
               to={`/orders/${o.id}`}
-              className="block rounded-2xl border border-border bg-card p-4 shadow-sm transition hover:border-bolt-300"
+              className="block h-full rounded-2xl border border-border bg-card p-4 shadow-sm transition hover:border-bolt-300 hover:shadow-md"
             >
               <div className="flex items-start justify-between gap-2">
                 <div>
@@ -310,13 +312,13 @@ export function OrderDetailPage() {
           : 'Waiting for a driver';
 
   return (
-    <div className="mx-auto max-w-lg space-y-4">
+    <div className="mx-auto max-w-lg space-y-4 md:max-w-5xl">
       <div className="flex items-start justify-between">
         <div>
           <p className="font-mono text-xs text-muted-foreground">
             {order.orderNumber}
           </p>
-          <h1 className="font-display text-2xl font-extrabold">
+          <h1 className="font-display text-2xl font-extrabold md:text-3xl">
             {formatTZS(order.total)}
           </h1>
         </div>
@@ -325,9 +327,14 @@ export function OrderDetailPage() {
         </Badge>
       </div>
 
+      <div
+        className={cn(
+          showMap && 'md:grid md:grid-cols-2 md:items-start md:gap-5',
+        )}
+      >
       {/* Live tracking */}
-      {showMap && (
-        <div className="space-y-3 rounded-2xl border border-border bg-card p-4 shadow-sm">
+      {showMap ? (
+        <div className="space-y-3 rounded-2xl border border-border bg-card p-4 shadow-sm md:sticky md:top-20">
           <div className="flex items-start justify-between gap-2">
             <div>
               <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
@@ -440,8 +447,9 @@ export function OrderDetailPage() {
             </p>
           )}
         </div>
-      )}
+      ) : null}
 
+      <div className="space-y-4">
       {/* Timeline */}
       <div className="rounded-2xl border border-border bg-card p-4">
         <p className="mb-3 text-xs font-bold uppercase text-muted-foreground">
@@ -672,6 +680,8 @@ export function OrderDetailPage() {
           })}
         </div>
       )}
+      </div>
+      </div>
     </div>
   );
 }
