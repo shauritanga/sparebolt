@@ -1,0 +1,35 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: sparebolt-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: sparebolt
+      POSTGRES_PASSWORD: sparebolt
+      POSTGRES_DB: sparebolt
+    ports:
+      - "5432:5432"
+    volumes:
+      - sparebolt_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sparebolt"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    container_name: sparebolt-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: sparebolt
+      MINIO_ROOT_PASSWORD: sparebolt_secret
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - sparebolt_minio:/data
+
+volumes:
+  sparebolt_pg:
+  sparebolt_minio:
