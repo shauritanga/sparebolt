@@ -95,24 +95,19 @@ export function AppShell() {
     location.pathname.startsWith('/parts/') ||
     isAdmin;
 
-  const showDesktopChrome = !isAdmin;
-
   const toggleLang = () => {
     const next = i18n.language === 'en' ? 'sw' : 'en';
     void i18n.changeLanguage(next);
     localStorage.setItem('sb_locale', next);
   };
 
-  /** Desktop top nav order */
-  const customerNav: NavItem[] = [
+  const customerDesktopNav: NavItem[] = [
     { to: '/', icon: Home, label: t('home'), end: true },
     { to: '/browse', icon: Search, label: t('browse') },
     { to: '/orders', icon: Package, label: t('orders') },
-    { to: '/cart', icon: ShoppingCart, label: t('cart'), badge: cartCount },
     { to: '/account', icon: User, label: t('account') },
   ];
 
-  /** Mobile bottom tabs — original order (icons + labels) */
   const mobileCustomerNav: NavItem[] = [
     { to: '/', icon: Home, label: t('home'), end: true },
     { to: '/browse', icon: Search, label: t('browse') },
@@ -174,11 +169,13 @@ export function AppShell() {
     { to: '/account', icon: User, label: t('account') },
   ];
 
-  const nav = driverMode
+  const desktopNav = driverMode
     ? driverNav
     : sellerMode
       ? sellerNav
-      : customerNav;
+      : customerDesktopNav;
+
+  const mobileNav = workMode ? desktopNav : mobileCustomerNav;
 
   const onHeaderSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -200,8 +197,8 @@ export function AppShell() {
   }
 
   return (
-    <div className="flex min-h-dvh flex-col bg-background md:bg-[#eef2f1] dark:md:bg-background">
-      {/* ═══════════════ MOBILE HEADER (unchanged pattern) ═══════════════ */}
+    <div className="flex min-h-dvh flex-col bg-background">
+      {/* ─── MOBILE HEADER (do not change structure) ─── */}
       <header className="sticky top-0 z-40 border-b border-border bg-card/95 backdrop-blur-md safe-pt md:hidden">
         <div className="mx-auto flex h-14 max-w-lg items-center justify-between gap-3 px-4">
           <Link to={roleHome} className="flex shrink-0 items-center gap-2">
@@ -261,60 +258,101 @@ export function AppShell() {
         )}
       </header>
 
-      {/* ═══════════════ DESKTOP HEADER ═══════════════ */}
-      {showDesktopChrome && (
-        <header className="sticky top-0 z-40 hidden border-b border-border/80 bg-card shadow-[0_1px_0_rgba(15,23,42,0.04)] md:block">
-          <div className="mx-auto flex h-[4.25rem] max-w-[1280px] items-center gap-6 px-6 lg:gap-10 lg:px-10">
-            {/* Brand */}
-            <Link to={roleHome} className="group flex shrink-0 items-center gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-bolt-700 text-white shadow-sm transition group-hover:bg-bolt-600">
-                <Bolt className="h-5 w-5 fill-current" />
-              </span>
-              <div className="leading-none">
-                <span className="font-display text-[1.35rem] font-extrabold tracking-tight text-foreground">
+      {/* ─── DESKTOP: classic marketplace header ─── */}
+      {!isAdmin && (
+        <header className="sticky top-0 z-40 hidden bg-card md:block">
+          {/* Row 1: logo · search · utilities */}
+          <div className="border-b border-border">
+            <div className="mx-auto flex h-16 max-w-6xl items-center gap-6 px-6 lg:px-8">
+              <Link to={roleHome} className="flex shrink-0 items-center gap-2">
+                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-bolt-700 text-white">
+                  <Bolt className="h-5 w-5 fill-current" />
+                </span>
+                <span className="font-display text-xl font-extrabold tracking-tight text-foreground">
                   Spare<span className="text-bolt-600">Bolt</span>
                 </span>
-                <p className="mt-1 text-[11px] font-medium tracking-wide text-muted-foreground">
-                  {t('tagline')}
-                </p>
-              </div>
-            </Link>
+              </Link>
 
-            {/* Center search (customers only) */}
-            {!workMode && !isAuth && (
-              <form
-                onSubmit={onHeaderSearch}
-                className="mx-auto hidden min-w-0 max-w-xl flex-1 lg:block"
-              >
-                <label className="relative block">
-                  <span className="sr-only">{t('searchPlaceholder')}</span>
-                  <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <input
-                    value={headerQ}
-                    onChange={(e) => setHeaderQ(e.target.value)}
-                    placeholder={t('searchPlaceholder')}
-                    className="h-11 w-full rounded-full border border-border bg-[#f4f7f6] py-2 pl-10 pr-28 text-sm text-foreground outline-none transition placeholder:text-muted-foreground focus:border-bolt-500 focus:bg-card focus:ring-2 focus:ring-bolt-500/20 dark:bg-muted"
-                  />
-                  <button
-                    type="submit"
-                    className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-full bg-bolt-700 px-4 py-1.5 text-xs font-bold text-white transition hover:bg-bolt-600"
+              {!workMode && !isAuth ? (
+                <form
+                  onSubmit={onHeaderSearch}
+                  className="flex min-w-0 flex-1 items-center"
+                >
+                  <div className="flex w-full max-w-2xl overflow-hidden rounded-md border border-border bg-background focus-within:border-bolt-600 focus-within:ring-1 focus-within:ring-bolt-600">
+                    <input
+                      value={headerQ}
+                      onChange={(e) => setHeaderQ(e.target.value)}
+                      placeholder={t('searchPlaceholder')}
+                      className="min-w-0 flex-1 border-0 bg-transparent px-3 py-2.5 text-sm text-foreground outline-none placeholder:text-muted-foreground"
+                    />
+                    <button
+                      type="submit"
+                      className="shrink-0 bg-bolt-700 px-5 text-sm font-semibold text-white hover:bg-bolt-600"
+                    >
+                      {t('browse')}
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <div className="flex-1" />
+              )}
+
+              <div className="flex shrink-0 items-center gap-4 text-sm">
+                <button
+                  type="button"
+                  onClick={toggleLang}
+                  className="cursor-pointer font-medium text-muted-foreground hover:text-foreground"
+                >
+                  {i18n.language === 'en' ? 'SW' : 'EN'}
+                </button>
+                <button
+                  type="button"
+                  onClick={toggleTheme}
+                  className="cursor-pointer text-muted-foreground hover:text-foreground"
+                  aria-label={isDark ? t('lightMode') : t('darkMode')}
+                >
+                  {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                </button>
+                {user && (
+                  <Link
+                    to="/notifications"
+                    className="text-muted-foreground hover:text-foreground"
+                    aria-label={t('notifications')}
                   >
-                    {t('browse')}
-                  </button>
-                </label>
-              </form>
-            )}
-
-            {/* Text nav */}
-            {!isAuth && (
-              <nav
-                className={cn(
-                  'flex items-center gap-0.5',
-                  workMode ? 'ml-4 flex-1' : 'ml-auto',
+                    <Bell className="h-4 w-4" />
+                  </Link>
                 )}
+                {!workMode && (
+                  <Link
+                    to="/cart"
+                    className="relative font-medium text-foreground hover:text-bolt-700"
+                  >
+                    {t('cart')}
+                    {cartCount > 0 && (
+                      <span className="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-signal px-1 text-[10px] font-bold text-steel-950">
+                        {cartCount}
+                      </span>
+                    )}
+                  </Link>
+                )}
+                <Link
+                  to={user ? '/account' : '/auth/login'}
+                  className="font-semibold text-foreground hover:text-bolt-700"
+                >
+                  {user ? user.firstName : t('login')}
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          {/* Row 2: text navigation */}
+          {!isAuth && (
+            <div className="border-b border-border bg-card">
+              <nav
+                className="mx-auto flex max-w-6xl items-center gap-1 px-6 lg:px-8"
                 aria-label="Main"
               >
-                {nav.map((item) => {
+                {desktopNav.map((item) => {
                   const active = navItemActive(
                     item,
                     location.pathname,
@@ -326,73 +364,25 @@ export function AppShell() {
                       to={item.to}
                       end={item.end}
                       className={cn(
-                        'relative px-3.5 py-2 text-[13px] font-semibold tracking-wide transition-colors',
+                        'border-b-2 px-4 py-3 text-sm font-medium transition-colors',
                         active
-                          ? 'text-bolt-800 dark:text-bolt-200'
-                          : 'text-steel-600 hover:text-foreground dark:text-muted-foreground dark:hover:text-foreground',
+                          ? 'border-bolt-700 text-bolt-800 dark:border-bolt-400 dark:text-bolt-200'
+                          : 'border-transparent text-muted-foreground hover:border-border hover:text-foreground',
                       )}
                     >
                       {item.label}
                       {item.badge ? (
-                        <span className="ml-1.5 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-amber-signal px-1 text-[10px] font-bold text-steel-950">
-                          {item.badge}
+                        <span className="ml-1.5 text-xs font-bold text-amber-600">
+                          ({item.badge})
                         </span>
                       ) : null}
-                      <span
-                        className={cn(
-                          'absolute inset-x-3 -bottom-[calc(1.125rem+1px)] h-[2px] rounded-full bg-bolt-600 transition-opacity',
-                          active ? 'opacity-100' : 'opacity-0',
-                        )}
-                      />
                     </NavLink>
                   );
                 })}
               </nav>
-            )}
-
-            {/* Right tools */}
-            <div className={cn('flex shrink-0 items-center gap-1', isAuth && 'ml-auto')}>
-              <button
-                type="button"
-                onClick={toggleLang}
-                className="cursor-pointer rounded-lg px-2.5 py-1.5 text-[11px] font-bold uppercase tracking-wider text-muted-foreground hover:bg-muted hover:text-foreground"
-              >
-                {i18n.language === 'en' ? 'SW' : 'EN'}
-              </button>
-              <button
-                type="button"
-                onClick={toggleTheme}
-                className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
-                aria-label={isDark ? t('lightMode') : t('darkMode')}
-              >
-                {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-              </button>
-              {user && (
-                <Link
-                  to="/notifications"
-                  className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
-                  aria-label={t('notifications')}
-                >
-                  <Bell className="h-4 w-4" />
-                </Link>
-              )}
-              <div className="mx-1 h-6 w-px bg-border" />
-              <Link
-                to={user ? '/account' : '/auth/login'}
-                className="inline-flex items-center gap-2 rounded-full border border-border bg-card py-1 pl-1 pr-3 text-sm font-semibold text-foreground shadow-sm transition hover:border-bolt-400 hover:shadow"
-              >
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-bolt-600 to-bolt-800 text-[11px] font-bold text-white">
-                  {user
-                    ? `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}`.toUpperCase() ||
-                      'SB'
-                    : '?'}
-                </span>
-                <span className="max-w-[7rem] truncate">
-                  {user ? user.firstName : t('login')}
-                </span>
-              </Link>
             </div>
-          </div>
+          )}
+
           {offline && (
             <div className="bg-warning-soft px-4 py-1.5 text-center text-xs font-medium text-warning-soft-foreground">
               {t('offline')}
@@ -401,37 +391,28 @@ export function AppShell() {
         </header>
       )}
 
-      {/* ═══════════════ MAIN ═══════════════ */}
+      {/* ─── MAIN ─── */}
       <main
         className={cn(
           'w-full flex-1',
-          /* mobile */
           'px-4 py-4',
           !hideMobileNav && 'pb-24',
-          /* desktop */
           'md:px-0 md:py-0 md:pb-0',
         )}
       >
-        <div
-          className={cn(
-            'mx-auto w-full',
-            /* mobile: no extra frame */
-            /* desktop: spacious canvas */
-            'md:max-w-[1280px] md:px-6 md:py-8 lg:px-10 lg:py-10',
-          )}
-        >
+        <div className="mx-auto w-full max-w-6xl md:px-6 md:py-8 lg:px-8">
           <Outlet />
         </div>
       </main>
 
-      {/* ═══════════════ DESKTOP FOOTER ═══════════════ */}
-      {showDesktopChrome && <SiteFooter />}
+      {/* ─── DESKTOP FOOTER ─── */}
+      {!isAdmin && <SiteFooter />}
 
-      {/* ═══════════════ MOBILE BOTTOM NAV (unchanged) ═══════════════ */}
+      {/* ─── MOBILE BOTTOM NAV (unchanged) ─── */}
       {!hideMobileNav && (
         <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-card/95 backdrop-blur-md safe-pb md:hidden">
           <ul className="mx-auto flex max-w-lg items-stretch justify-around px-1 pt-1">
-            {(workMode ? nav : mobileCustomerNav).map((item) => {
+            {mobileNav.map((item) => {
               const Icon = item.icon;
               return (
                 <li key={item.to} className="flex-1">
