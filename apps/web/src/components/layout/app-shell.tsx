@@ -60,6 +60,10 @@ export function AppShell() {
     const off = () => setOffline(true);
     window.addEventListener('online', on);
     window.addEventListener('offline', off);
+    // Ensure abandoned-cart recovery re-syncs after IndexedDB rehydrate
+    void import('@/lib/cart-sync').then(({ initCartSyncOnHydration }) => {
+      initCartSyncOnHydration();
+    });
     return () => {
       window.removeEventListener('online', on);
       window.removeEventListener('offline', off);
@@ -77,9 +81,10 @@ export function AppShell() {
         }
       });
     });
+    // After login / session restore: wait for cart hydration, then sync
     void import('@/lib/cart-sync').then(({ flushCartSync }) => {
       if (cancelled) return;
-      flushCartSync(useCartStore.getState().items);
+      void flushCartSync();
     });
     return () => {
       cancelled = true;

@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Put, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Put, UseGuards } from '@nestjs/common';
 import { CartService } from './cart.service';
 import { SyncCartDto } from './cart.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
@@ -18,5 +18,11 @@ export class CartController {
   @Delete('sync')
   clear(@CurrentUser('id') userId: string) {
     return this.cart.clear(userId);
+  }
+
+  /** Confirm recovery schedule is working (any authed user). */
+  @Get('recovery-stats')
+  stats() {
+    return this.cart.recoveryStats();
   }
 }

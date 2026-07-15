@@ -7,7 +7,7 @@ import { SyncCartDto } from './cart.dto';
 
 /** Reminder offsets from last cart activity (ms) */
 const REMINDER_OFFSETS_MS = [
-  2 * 60 * 60 * 1000, // 2 hours
+  30 * 60 * 1000, // 30 minutes — first nudge
   24 * 60 * 60 * 1000, // 24 hours
   48 * 60 * 60 * 1000, // 48 hours
 ] as const;
@@ -79,6 +79,10 @@ export class CartService {
       },
     });
 
+    this.logger.log(
+      `Cart synced user=${userId} items=${itemCount} nextReminder=${nextReminderAt.toISOString()}`,
+    );
+
     return {
       ok: true,
       itemCount,
@@ -91,21 +95,24 @@ export class CartService {
     return { ok: true, cleared: true };
   }
 
-  /** Process due abandoned-cart reminders every 10 minutes */
-  @Cron(CronExpression.EVERY_10_MINUTES)
+  /** Process due abandoned-cart reminders every 5 minutes */
+  @Cron(CronExpression.EVERY_5_MINUTES)
   async processAbandonedCarts() {
     const now = new Date();
     const due = await this.prisma.cartSnapshot.findMany({
       where: {
         itemCount: { gt: 0 },
         remindersSent: { lt: MAX_REMINDERS },
-        nextReminderAt: { lte: now },
+        nextReminderAt: { lte: now, not: null },
       },
       take: 100,
       orderBy: { nextReminderAt: 'asc' },
     });
 
-    if (!due.length) return;
+    if (!due.length) {
+      this.logger.debug('Cart recovery: nothing due');
+      return;
+    }
 
     this.logger.log(`Cart recovery: ${due.length} snapshot(s) due`);
 
@@ -165,25 +172,13 @@ export class CartService {
 
     // Push only for cart recovery (avoid cluttering in-app feed every time)
     // First reminder also creates an in-app row so they see it in Notifications.
-    if (step === 0) {
-      await this.notifications.notify(snap.userId, {
-        type: 'SYSTEM',
-        title: copy.title,
-        body: copy.body,
-        data: { kind: 'cart_recovery', step: String(step + 1), link: '/cart' },
-      });
-    } else {
-      await this.notifications.pushToUser(snap.userId, {
-        title: copy.title,
-        body: copy.body,
-        data: {
-          kind: 'cart_recovery',
-          step: String(step + 1),
-          link: '/cart',
-          type: 'SYSTEM',
-        },
-      });
-    }
+    // Always in-app + FCM so recovery is visible even if push permission denied
+    await this.notifications.notify(snap.userId, {
+      type: 'SYSTEM',
+      title: copy.title,
+      body: copy.body,
+      data: { kind: 'cart_recovery', step: String(step + 1), link: '/cart' },
+    });
 
     const newSent = snap.remindersSent + 1;
     let nextReminderAt: Date | null = null;
@@ -209,9 +204,26 @@ export class CartService {
       },
     });
 
-    this.logger.debug(
-      `Cart reminder #${newSent} sent to user ${snap.userId}`,
+    this.logger.log(
+      `Cart reminder #${newSent} sent to user ${snap.userId} (next=${nextReminderAt?.toISOString() ?? 'done'})`,
     );
+  }
+
+  /** Dev / ops: how many open carts are scheduled */
+  async recoveryStats() {
+    const [open, dueSoon] = await Promise.all([
+      this.prisma.cartSnapshot.count({
+        where: { itemCount: { gt: 0 }, remindersSent: { lt: MAX_REMINDERS } },
+      }),
+      this.prisma.cartSnapshot.count({
+        where: {
+          itemCount: { gt: 0 },
+          remindersSent: { lt: MAX_REMINDERS },
+          nextReminderAt: { lte: new Date(Date.now() + 60 * 60 * 1000) },
+        },
+      }),
+    ]);
+    return { openCarts: open, dueWithinHour: dueSoon };
   }
 
   /** Shift a target time out of quiet hours (22:00–07:00 EAT). */
